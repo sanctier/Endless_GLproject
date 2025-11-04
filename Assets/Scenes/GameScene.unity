@@ -5582,10 +5582,13 @@ MonoBehaviour:
   attackCooldown: 1.5
   damageLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   attackRange: 1.5
   shieldChance: 0.5
   shieldDuration: 7
+  fallbackAttackDuration: 1
+  fallbackShieldDuration: 1
+  fallbackHitDuration: 0.6
 --- !u!50 &1230057271
 Rigidbody2D:
   serializedVersion: 5

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class SkeletonEnemy : MonoBehaviour
 {
@@ -24,15 +25,21 @@ public class SkeletonEnemy : MonoBehaviour
     private bool facingRight = true;
 
     private Collider2D myCollider;
-    // separate flag for the (trigger) attack box so Update doesn't overwrite it
     private bool playerInTrigger = false;
-    // internal busy flag to avoid relying on Animator state name checks
     private bool isBusy = false;
 
     // Shield state
     private bool isShielding = false;
     public float shieldDuration = 0.7f;
     private float shieldTimer = 0f;
+
+    // Fallback durations (in seconds) in case animation events are not set
+    public float fallbackAttackDuration = 1.0f;
+    public float fallbackShieldDuration = 1.0f;
+    public float fallbackHitDuration = 0.6f;
+
+    // store currently running fallback coroutine so we can cancel it when the animation event fires
+    private Coroutine fallbackCoroutine = null;
 
     void Start()
     {
@@ -53,28 +60,23 @@ public class SkeletonEnemy : MonoBehaviour
 
         float distance = Vector2.Distance(transform.position, player.position);
 
-        // Prefer a runtime distance check for attack range but respect the trigger collider too
-        // If the skeleton's box collider (trigger) contains the player we want to allow attacks even
-        // if the distance math is slightly off. Combine both checks.
         bool inRange = distance <= attackRange || playerInTrigger;
-        // keep the public/used flag in sync
         playerInRange = inRange;
 
-        // --- Handle shield timer ---
+        // Shield timer
         if (isShielding)
         {
             shieldTimer -= Time.deltaTime;
             if (shieldTimer <= 0f)
             {
-                // Ensure shield ends via the same path as the animation event
+                // Call EndShield via same path as animation event
                 EndShield();
             }
         }
 
         bool isRunning = false;
 
-        // --- Movement ---
-        // Move while player is out of range
+        // Movement: move while player is out of range
         if (!inRange)
         {
             Vector2 dir = (player.position - transform.position).normalized;
@@ -82,58 +84,54 @@ public class SkeletonEnemy : MonoBehaviour
             isRunning = true;
         }
 
-        // Animator now uses 'isRunning'
-        animator.SetBool("isRunning", isRunning);
+        // Animator - ensure parameter exists in your animator (case-sensitive)
+        if (animator != null) animator.SetBool("isRunning", isRunning);
 
-        // --- Flipping ---
+        // Flipping
         if (player.position.x < transform.position.x && facingRight) Flip();
         else if (player.position.x > transform.position.x && !facingRight) Flip();
 
-        // --- Attack / Shield ---
-        // Use distance-based inRange primarily so child-collider noise doesn't cancel attacks
+        // Attack / Shield decision
         if (inRange && attackTimer <= 0f && !isShielding)
         {
-            // don't start a new attack while busy (attack/shield/hit/etc.)
             bool canStartAttack = !isBusy;
             if (!canStartAttack)
             {
-                // skip starting an attack this frame; allow Update to continue so timers decrement
+                // Busy: waiting for animation to finish (or fallback)
             }
             else if (Random.value < shieldChance)
-             {
-                 // Start shielding
-                 isShielding = true;
-                 shieldTimer = shieldDuration;
-                 // Animator uses 'isBlocking' as a Trigger now
-                 animator.SetTrigger("isBlocking");
-                // mark busy until EndShield is called by animation event
+            {
+                // Start shielding
+                isShielding = true;
+                shieldTimer = shieldDuration;
+                if (animator != null) animator.SetTrigger("isBlocking");
                 isBusy = true;
-                  // Make sure running is disabled while blocking
-                  animator.SetBool("isRunning", false);
-             }
-             else
-             {
-                 // Attack
-                 int attackType = Random.Range(0, 2);
-                 // Trigger attack animations (Attack1/Attack2 are Triggers)
-                 animator.SetBool("isRunning", false);
-                 if (attackType == 0)
-                 {
-                     animator.SetTrigger("Attack1");
-                 }
-                 else
-                 {
-                    // Animator parameter uses 'Attack 2' (with space)
-                    animator.SetTrigger("Attack2");
-                 }
-                // mark busy until EndAttack animation event clears it
-                isBusy = true;
-              }
+                if (animator != null) animator.SetBool("isRunning", false);
 
-             // only reset cooldown when an action actually started (shield or attack)
-             if (canStartAttack)
-                 attackTimer = attackCooldown;
-         }
+                // start fallback in case animation event EndShield is missing
+                StartFallback(FallbackType.Shield);
+            }
+            else
+            {
+                // Attack
+                int attackType = Random.Range(0, 2);
+                if (animator != null) animator.SetBool("isRunning", false);
+                if (attackType == 0)
+                    if (animator != null) animator.SetTrigger("Attack1");
+                    else Debug.LogWarning("Animator missing or Attack1 trigger not found.");
+                else
+                    if (animator != null) animator.SetTrigger("Attack2");
+                    else Debug.LogWarning("Animator missing or Attack2 trigger not found.");
+
+                isBusy = true;
+
+                // start fallback in case EndAttack animation event is missing
+                StartFallback(FallbackType.Attack);
+            }
+
+            if (canStartAttack)
+                attackTimer = attackCooldown;
+        }
 
         attackTimer -= Time.deltaTime;
     }
@@ -150,17 +148,20 @@ public class SkeletonEnemy : MonoBehaviour
     {
         if (isDead) return;
 
-        // 50% chance to block if shield is active
-        // Prefer the internal shield state for logic; Animator 'isBlocking' is now a trigger so rely on isShielding
+        // If shielding, consider it blocked (still log it)
         if (isShielding)
         {
+            Debug.Log($"{name} blocked damage while shielding.");
             return;
         }
 
         currentHealth -= damage;
-        // Hit is now a trigger named 'TakeHit'
-        animator.SetTrigger("TakeHit");
-        isBusy = true; // prevent other actions while hit animation plays
+        Debug.Log($"{name} took {damage} damage. HP: {currentHealth}/{maxHealth}");
+        if (animator != null) animator.SetTrigger("TakeHit");
+
+        // mark busy and start fallback so hit animation doesn't block forever
+        isBusy = true;
+        StartFallback(FallbackType.Hit);
 
         if (currentHealth <= 0)
         {
@@ -171,13 +172,12 @@ public class SkeletonEnemy : MonoBehaviour
     void Die()
     {
         isDead = true;
-        // Death is now a trigger named 'Die'
-        animator.SetTrigger("Die");
+        if (animator != null) animator.SetTrigger("Die");
 
         if (rb != null) rb.linearVelocity = Vector2.zero;
         if (myCollider != null) myCollider.enabled = false;
 
-        Destroy(gameObject, 4f); // adjust to match death animation length
+        Destroy(gameObject, 4f);
     }
 
     void OnTriggerEnter2D(Collider2D collision)
@@ -185,11 +185,15 @@ public class SkeletonEnemy : MonoBehaviour
         if (isDead) return;
 
         if (collision.CompareTag("Player"))
+        {
             playerInTrigger = true;
+            Debug.Log($"{name} player entered trigger.");
+        }
 
         if (((1 << collision.gameObject.layer) & damageLayer) != 0)
         {
-            TakeDamage(10); // replace with dynamic damage if needed
+            Debug.Log($"{name} hit by damage layer object: {collision.gameObject.name} (layer {LayerMask.LayerToName(collision.gameObject.layer)})");
+            TakeDamage(10); // adapt if you have dynamic damage
         }
     }
 
@@ -198,37 +202,87 @@ public class SkeletonEnemy : MonoBehaviour
         if (isDead) return;
 
         if (collision.CompareTag("Player"))
+        {
             playerInTrigger = false;
+            Debug.Log($"{name} player exited trigger.");
+        }
     }
 
     // Animation event called at end of Attack1/2
     public void EndAttack()
     {
-        // attack finished
+        Debug.Log($"{name} EndAttack called (animation event).");
         isBusy = false;
+        StopFallback();
     }
 
     // Animation event called at end of shield
     public void EndShield()
     {
+        Debug.Log($"{name} EndShield called (animation event).");
         isShielding = false;
-        // Clear the blocking trigger in case it's still set (triggers are one-shot but resetting is safe)
-        animator.ResetTrigger("isBlocking");
+        if (animator != null) animator.ResetTrigger("isBlocking");
         isBusy = false;
+        StopFallback();
     }
+
     // Animation event called at end of TakeHit
     public void EndHit()
     {
-        // allow attacking again after hit animation
+        Debug.Log($"{name} EndHit called (animation event).");
         isBusy = false;
+        StopFallback();
     }
 
-    // Animation event called when dealing damage to player (set in attack animations)
+    // Animation event: apply damage to player at the hit frame
     public void DealDamageToPlayer()
     {
+        Debug.Log($"{name} DealDamageToPlayer called. playerInRange={playerInRange}, isDead={isDead}");
         if (player != null && playerInRange && !isDead)
         {
-            player.GetComponent<PlayerController>()?.TakeDamage((int)contactDamage);
+            var pc = player.GetComponent<PlayerController>();
+            if (pc != null)
+            {
+                pc.TakeDamage(contactDamage);
+                Debug.Log($"{name} dealt {contactDamage} to player.");
+            }
+            else
+            {
+                Debug.LogWarning("PlayerController not found on player GameObject.");
+            }
         }
+    }
+
+    // --- Fallback helper (in case animation events are missing) ---
+    enum FallbackType { Attack, Shield, Hit }
+
+    void StartFallback(FallbackType type)
+    {
+        // cancel any existing fallback coroutine
+        StopFallback();
+
+        float dur = fallbackAttackDuration;
+        if (type == FallbackType.Shield) dur = fallbackShieldDuration;
+        else if (type == FallbackType.Hit) dur = fallbackHitDuration;
+
+        fallbackCoroutine = StartCoroutine(FallbackClearBusy(dur));
+    }
+
+    void StopFallback()
+    {
+        if (fallbackCoroutine != null)
+        {
+            StopCoroutine(fallbackCoroutine);
+            fallbackCoroutine = null;
+        }
+    }
+
+    IEnumerator FallbackClearBusy(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        isBusy = false;
+        isShielding = false;
+        fallbackCoroutine = null;
+        Debug.Log($"{name} fallback cleared isBusy after {duration} seconds.");
     }
 }
