@@ -4,10 +4,11 @@ using System.Collections;
 public class SkeletonEnemy : MonoBehaviour
 {
     [Header("Stats")]
-    public int maxHealth = 50;
+    public int maxHealth = 60;
     public float moveSpeed = 2f;
-    public float contactDamage = 10f;
+    public float contactDamage = 8f;
     public float attackCooldown = 1.5f;
+    public int goldOnDeath = 10;
 
     [Header("Combat")]
     public LayerMask damageLayer;
@@ -27,6 +28,8 @@ public class SkeletonEnemy : MonoBehaviour
     private Collider2D myCollider;
     private bool playerInTrigger = false;
     private bool isBusy = false;
+    // fallback flag to avoid double-applying damage when animation event and fallback both fire
+    private bool attackHitApplied = false;
 
     // Shield state
     private bool isShielding = false;
@@ -111,8 +114,8 @@ public class SkeletonEnemy : MonoBehaviour
                 // start fallback in case animation event EndShield is missing
                 StartFallback(FallbackType.Shield);
             }
-            else
-            {
+                else
+                {
                 // Attack
                 int attackType = Random.Range(0, 2);
                 if (animator != null) animator.SetBool("isRunning", false);
@@ -126,7 +129,11 @@ public class SkeletonEnemy : MonoBehaviour
                 isBusy = true;
 
                 // start fallback in case EndAttack animation event is missing
-                StartFallback(FallbackType.Attack);
+                    StartFallback(FallbackType.Attack);
+                    // start a timed fallback to apply damage in case the animation event (DealDamageToPlayer)
+                    // is not present or missed; this will be cancelled if the animation event fires first.
+                    attackHitApplied = false;
+                    StartCoroutine(FallbackAttackHit(fallbackAttackDuration * 0.45f));
             }
 
             if (canStartAttack)
@@ -176,6 +183,22 @@ public class SkeletonEnemy : MonoBehaviour
 
         if (rb != null) rb.linearVelocity = Vector2.zero;
         if (myCollider != null) myCollider.enabled = false;
+
+        // award gold and notify wave manager (if present)
+        if (goldOnDeath > 0)
+        {
+            var cm = FindObjectOfType<CurrencyManager>();
+            if (cm != null)
+                cm.AddCurrency(goldOnDeath);
+            else if (CurrencyManager.Instance != null)
+                CurrencyManager.Instance.AddCurrency(goldOnDeath);
+        }
+
+        var wm = FindObjectOfType<WaveManager>();
+        if (wm != null)
+            wm.EnemyDefeated();
+        else if (WaveManager.Instance != null)
+            WaveManager.Instance.EnemyDefeated();
 
         Destroy(gameObject, 4f);
     }
@@ -243,13 +266,29 @@ public class SkeletonEnemy : MonoBehaviour
             var pc = player.GetComponent<PlayerController>();
             if (pc != null)
             {
-                pc.TakeDamage(contactDamage);
-                Debug.Log($"{name} dealt {contactDamage} to player.");
+                // Ensure we don't apply the same hit twice (animation event + fallback)
+                if (!attackHitApplied)
+                {
+                    pc.TakeDamage(contactDamage);
+                    Debug.Log($"{name} dealt {contactDamage} to player.");
+                    attackHitApplied = true;
+                }
             }
             else
             {
                 Debug.LogWarning("PlayerController not found on player GameObject.");
             }
+        }
+    }
+
+    // Fallback attack hit: called if animation event doesn't fire
+    IEnumerator FallbackAttackHit(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (isBusy && !attackHitApplied)
+        {
+            // try to apply damage via same method (respects playerInRange)
+            DealDamageToPlayer();
         }
     }
 
