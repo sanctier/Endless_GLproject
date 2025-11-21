@@ -177,9 +177,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 1
-  goldOnDeath: 50
-  moveSpeed: 50
-  explosionDamage: 40
+  goldOnDeath: 1000
+  moveSpeed: 30
+  explosionDamage: 50
   explosionRadius: 2
   explosionPrefab: {fileID: 431954891982040764, guid: 4c461971354c3104a81cf08dd57f233b, type: 3}
   timeUntilExplosion: 1.67
@@ -189,6 +189,10 @@ MonoBehaviour:
   damageLayer:
     serializedVersion: 2
     m_Bits: 256
+  explodeClip: {fileID: 8300000, guid: b8a573d5513d6cc45b275739d090dfa8, type: 3}
+  explodeVolume: 0.537
+  beepClip: {fileID: 8300000, guid: 1cde6ca7bb7087949a330038289dfa60, type: 3}
+  beepVolume: 0.088
 --- !u!95 &8138716645053572403
 Animator:
   serializedVersion: 7

@@ -1,147 +1,105 @@
 using UnityEngine;
 using System.Collections;
 
+/// <summary>
+/// Minimal PeriodicSword: listens for the player's attack completion and
+/// spawns a single `slashPrefab` in front of the player (based on facing).
+/// Keep it small: activation gating, single instance, and a simple linger.
+/// </summary>
 public class PeriodicSword : MonoBehaviour
 {
-    [Header("Attack Settings")]
-    public float damage = 25f;
-    public float attackInterval = 5f;
-    public float attackRange = 3f;
-    public LayerMask enemyLayer;
-    
-    [Header("Visual Settings")]
-    public float swingDuration = 0.7f;
-    public float returnDuration = 0.3f;
-    public Vector3 startPosition = new Vector3(0.5f, 0, 0);
-    public Vector3 attackPosition = new Vector3(2f, 0, 0);
-    
-    private float attackTimer = 0f;
-    private bool isAttacking = false;
-    private Transform player;
-    private SpriteRenderer spriteRenderer;
-    private Collider2D swordCollider;
-    
+    [Tooltip("Prefab to spawn as the after-image (required)")]
+    public GameObject slashPrefab;
+    [Tooltip("Local X offset in front of the player (positive = right)")]
+    public float offsetX = 1.2f;
+    [Tooltip("How long the after-image should linger (seconds)")]
+    public float lingerDuration = 5f;
+    [Tooltip("If true, parent this controller to the player on Start (may move object to player).")]
+    public bool parentToPlayer = false;
+
+    private Transform playerTransform;
+    private GameObject currentAfterImage;
+    private bool isActivated = false;
+
     void Start()
     {
-        player = PlayerController.Instance.transform;
-        transform.parent = player;
-        transform.localPosition = startPosition;
-        
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        swordCollider = GetComponent<Collider2D>();
-        
-        // Make sure the sword is initially visible but not attacking
-        if (spriteRenderer != null) spriteRenderer.enabled = true;
-        if (swordCollider != null) swordCollider.enabled = false;
+        if (PlayerController.Instance == null)
+        {
+            Debug.LogError("PeriodicSword: PlayerController.Instance not found. Destroying self.");
+            Destroy(gameObject);
+            return;
+        }
+
+        playerTransform = PlayerController.Instance.transform;
+
+        // Respect existing scene position by default: only parent if requested.
+        if (parentToPlayer)
+        {
+            transform.SetParent(playerTransform, false);
+            transform.localPosition = Vector3.zero;
+        }
+
+        // hide any sprite renderer on the controller itself
+        var sr = GetComponent<SpriteRenderer>();
+        if (sr != null) sr.enabled = false;
     }
-    
-    void Update()
+
+    void OnDestroy()
     {
-        attackTimer += Time.deltaTime;
-        
-        // Check if it's time to attack and if enemies are in range
-        if (!isAttacking && attackTimer >= attackInterval && EnemiesInRange())
-        {
-            StartCoroutine(PerformAttack());
-        }
+        if (PlayerController.Instance != null)
+            PlayerController.Instance.OnAttackComplete -= OnPlayerAttackComplete;
     }
-    
-    bool EnemiesInRange()
+
+    /// <summary>
+    /// Activate so this controller responds to player attacks.
+    /// Call from ShopManager when purchased.
+    /// </summary>
+    public void Activate()
     {
-        Collider2D[] enemies = Physics2D.OverlapCircleAll(player.position, attackRange, enemyLayer);
-        return enemies.Length > 0;
+        if (isActivated) return;
+        isActivated = true;
+        if (PlayerController.Instance != null)
+            PlayerController.Instance.OnAttackComplete += OnPlayerAttackComplete;
     }
-    
-    IEnumerator PerformAttack()
+
+    private void OnPlayerAttackComplete()
     {
-        isAttacking = true;
-        attackTimer = 0f;
-        
-        // Enable collision
-        if (swordCollider != null) swordCollider.enabled = true;
-        
-        // Swing forward
-        float timer = 0f;
-        Vector3 initialPos = transform.localPosition;
-        
-        while (timer < swingDuration)
-        {
-            timer += Time.deltaTime;
-            float progress = timer / swingDuration;
-            transform.localPosition = Vector3.Lerp(initialPos, attackPosition, progress);
-            yield return null;
-        }
-        
-        // Damage all enemies in range at the peak of the swing
-        DamageEnemiesInRange();
-        
-        // Return to position
-        timer = 0f;
-        initialPos = transform.localPosition;
-        
-        while (timer < returnDuration)
-        {
-            timer += Time.deltaTime;
-            float progress = timer / returnDuration;
-            transform.localPosition = Vector3.Lerp(initialPos, startPosition, progress);
-            yield return null;
-        }
-        
-        // Ensure we're back at the start position
-        transform.localPosition = startPosition;
-        
-        // Disable collision
-        if (swordCollider != null) swordCollider.enabled = false;
-        
-        isAttacking = false;
+        if (!isActivated) return;
+        if (currentAfterImage != null) return; // only one at a time
+        SpawnOnce();
     }
-    
-    void DamageEnemiesInRange()
+
+    private void SpawnOnce()
     {
-        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(transform.position, attackRange / 2f, enemyLayer);
-        
-        foreach (Collider2D enemy in hitEnemies)
+        if (slashPrefab == null)
         {
-            EnemyHealth enemyHealth = enemy.GetComponent<EnemyHealth>();
-            if (enemyHealth != null)
-            {
-                enemyHealth.TakeDamage(damage);
-                
-                // Visual feedback
-                StartCoroutine(FlashEnemy(enemy));
-            }
+            Debug.LogWarning("PeriodicSword: no slashPrefab assigned.");
+            return;
         }
-        
-        if (hitEnemies.Length > 0)
-        {
-            // Play sound effect
-            AudioManager.Instance.Play("SwordSwing");
-        }
+
+        bool facingRight = PlayerController.Instance != null && PlayerController.Instance.IsFacingRight;
+        float dir = facingRight ? 1f : -1f;
+
+        // If this controller was left in the scene (not parented), honor its own transform position
+        // so you can place a `SlashSpawn` GameObject manually. If `parentToPlayer` is true
+        // we compute from the player's position as before.
+        Vector3 origin = parentToPlayer ? playerTransform.position : transform.position;
+        Vector3 spawnPos = origin + new Vector3(offsetX * dir, 0f, 0f);
+
+        currentAfterImage = Instantiate(slashPrefab, spawnPos, Quaternion.identity);
+
+        // optional: flip X scale to mirror prefab based on facing
+        Vector3 s = currentAfterImage.transform.localScale;
+        s.x = Mathf.Abs(s.x) * dir;
+        currentAfterImage.transform.localScale = s;
+
+        StartCoroutine(LingerCoroutine(currentAfterImage));
     }
-    
-    IEnumerator FlashEnemy(Collider2D enemy)
+
+    IEnumerator LingerCoroutine(GameObject go)
     {
-        SpriteRenderer enemyRenderer = enemy.GetComponent<SpriteRenderer>();
-        if (enemyRenderer != null)
-        {
-            Color originalColor = enemyRenderer.color;
-            enemyRenderer.color = Color.red;
-            yield return new WaitForSeconds(0.1f);
-            enemyRenderer.color = originalColor;
-        }
-    }
-    
-    void OnDrawGizmosSelected()
-    {
-        // Draw attack range
-        Gizmos.color = Color.yellow;
-        if (player != null)
-        {
-            Gizmos.DrawWireSphere(player.position, attackRange);
-        }
-        
-        // Draw damage range
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange / 2f);
+        yield return new WaitForSeconds(lingerDuration);
+        if (go != null) Destroy(go);
+        if (currentAfterImage == go) currentAfterImage = null;
     }
 }

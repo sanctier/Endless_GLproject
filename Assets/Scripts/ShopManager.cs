@@ -284,24 +284,59 @@ public class ShopManager : MonoBehaviour
 
     void ActivatePeriodicSword()
     {
-        if (PlayerController.Instance != null && periodicSwordPrefab != null)
+        if (PlayerController.Instance == null || periodicSwordPrefab == null) return;
+
+        // If an instance already exists on the player, activate it; otherwise instantiate and activate.
+        var existing = PlayerController.Instance.GetComponentInChildren<PeriodicSword>();
+        if (existing != null)
         {
-            GameObject sword = Instantiate(periodicSwordPrefab, PlayerController.Instance.transform);
-            sword.transform.localPosition = Vector3.zero;
-            activeUpgrades.Add(sword);
+            Debug.Log("ActivatePeriodicSword: Activating existing PeriodicSword on player.");
+            existing.Activate();
+            return;
         }
+
+        GameObject sword = Instantiate(periodicSwordPrefab, PlayerController.Instance.transform);
+        sword.transform.localPosition = Vector3.zero;
+        var controller = sword.GetComponent<PeriodicSword>();
+        if (controller != null)
+        {
+            controller.Activate();
+        }
+        activeUpgrades.Add(sword);
     }
 
 
     public bool TryBuyItem(ShopItem item)
     {
+        Debug.Log($"TryBuyItem: attempting purchase '{item.itemName}' cost={item.currentCost}");
+
         if (!item.consumable && item.upgradeLevel >= item.maxUpgradeLevel)
         {
-            Debug.Log("Already at max upgrade level!");
+            Debug.Log("TryBuyItem: Already at max upgrade level!");
             return false;
         }
 
-        if (CurrencyManager.Instance.SpendCurrency(item.currentCost))
+        if (CurrencyManager.Instance == null)
+        {
+            Debug.LogError("TryBuyItem: CurrencyManager.Instance is null");
+            return false;
+        }
+
+        int currentCurrency = CurrencyManager.Instance.GetCurrentCurrency();
+        Debug.Log($"TryBuyItem: currentCurrency={currentCurrency}, cost={item.currentCost}");
+
+        bool spent = false;
+        try
+        {
+            spent = CurrencyManager.Instance.SpendCurrency(item.currentCost);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogException(ex);
+            spent = false;
+        }
+
+        if (spent)
         {
             // Upgrade the item level
             item.Upgrade();
@@ -313,7 +348,7 @@ public class ShopManager : MonoBehaviour
             return true;
         }
 
-        Debug.Log("Not enough currency!");
+        Debug.Log($"TryBuyItem: Not enough currency or SpendCurrency returned false. spent={spent}");
         return false;
     }
 
@@ -392,6 +427,10 @@ public class ShopManager : MonoBehaviour
             shopPanel.SetActive(newState);
             Time.timeScale = newState ? 0f : 1f;
 
+            // Disable player attacks while shop is open
+            if (PlayerController.Instance != null)
+                PlayerController.Instance.SetCanAttack(!newState);
+
             // ADD THIS LINE - Update button states when opening shop
             if (newState) UpdateAllShopItemButtons();
         }
@@ -412,6 +451,9 @@ public class ShopManager : MonoBehaviour
             Time.timeScale = 0f;
             InitializeShop();
             UpdateAllShopItemButtons(); // ADD THIS LINE
+            // Disable player attacks while shop is open
+            if (PlayerController.Instance != null)
+                PlayerController.Instance.SetCanAttack(false);
         }
         else
         {
@@ -427,6 +469,9 @@ public class ShopManager : MonoBehaviour
         {
             shopPanel.SetActive(false);
             Time.timeScale = 1f;
+            // Re-enable player attacks when closing shop
+            if (PlayerController.Instance != null)
+                PlayerController.Instance.SetCanAttack(true);
         }
         else
         {

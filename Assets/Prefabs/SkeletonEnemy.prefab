@@ -212,3 +212,7 @@ MonoBehaviour:
   fallbackAttackDuration: 1
   fallbackShieldDuration: 1
   fallbackHitDuration: 0.6
+  attackClip: {fileID: 8300000, guid: b43bea45a791b164fb03ef758e0bf4eb, type: 3}
+  attackVolume: 0.89
+  blockClip: {fileID: 8300000, guid: d7e591b27487bd24b98b9006273c0c78, type: 3}
+  blockVolume: 0.963

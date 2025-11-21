@@ -19,6 +19,12 @@ public class MushroomEnemy : MonoBehaviour
     [Header("Combat")]
     public LayerMask damageLayer;
 
+    [Header("Audio")]
+    public AudioClip explodeClip;
+    [Range(0f,1f)] public float explodeVolume = 1f;
+    public AudioClip beepClip;
+    [Range(0f,1f)] public float beepVolume = 1f;
+
     private int currentHealth;
     private bool isDead = false;
     private bool isExploding = false;
@@ -38,6 +44,8 @@ public class MushroomEnemy : MonoBehaviour
     private bool isVisible = true;
     private bool isMoving = false;
     private float spawnTimer;
+    // audio source used for beep playback so we can stop it when explosion occurs
+    private AudioSource beepSource;
 
     void Start()
     {
@@ -46,6 +54,14 @@ public class MushroomEnemy : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         myCollider = GetComponent<Collider2D>();
+        // Ensure a dedicated AudioSource exists for beeps (so we can stop it)
+        beepSource = GetComponent<AudioSource>();
+        if (beepSource == null)
+        {
+            beepSource = gameObject.AddComponent<AudioSource>();
+            beepSource.playOnAwake = false;
+            beepSource.spatialBlend = 1f; // spatial 3D sound at mushroom position
+        }
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
 
         // Set interpolation for smooth movement
@@ -199,6 +215,18 @@ public class MushroomEnemy : MonoBehaviour
             Destroy(explosion, 2f); // Clean up explosion after 2 seconds
         }
 
+        // Play explosion sound (spatial) at the mushroom's position
+        if (explodeClip != null)
+        {
+            // stop any ongoing beeps immediately so they don't overlap the explosion
+            if (beepSource != null && beepSource.isPlaying)
+            {
+                try { beepSource.Stop(); } catch { }
+            }
+
+            AudioSource.PlayClipAtPoint(explodeClip, transform.position, explodeVolume);
+        }
+
         // Deal damage to player if in range
         DealExplosionDamage();
 
@@ -226,6 +254,16 @@ public class MushroomEnemy : MonoBehaviour
             Color color = spriteRenderer.color;
             color.a = isVisible ? 1f : 0.3f; // Flash between full and partial visibility
             spriteRenderer.color = color;
+        }
+
+        // Play a short beep when flashing (use dedicated AudioSource so we can stop it)
+        if (beepClip != null && beepSource != null)
+        {
+            // Prevent overlapping beeps if the clip is longer than the flash interval
+            if (!beepSource.isPlaying)
+            {
+                beepSource.PlayOneShot(beepClip, beepVolume);
+            }
         }
     }
 
@@ -255,6 +293,12 @@ public class MushroomEnemy : MonoBehaviour
         if (isDead) return;
 
         isDead = true;
+
+        // Ensure any ongoing beep is stopped immediately when the mushroom dies
+        if (beepSource != null && beepSource.isPlaying)
+        {
+            try { beepSource.Stop(); } catch { }
+        }
 
         // Make sure sprite is fully opaque when dying
         if (spriteRenderer != null)
@@ -298,6 +342,15 @@ public class MushroomEnemy : MonoBehaviour
         {
             int damage = 10; // Adjust based on your damage system
             TakeDamage(damage);
+        }
+    }
+
+    void OnDisable()
+    {
+        // Stop the beep if the object is disabled or destroyed
+        if (beepSource != null && beepSource.isPlaying)
+        {
+            try { beepSource.Stop(); } catch { }
         }
     }
 

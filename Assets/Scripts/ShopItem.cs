@@ -63,18 +63,12 @@ public class ShopItem
                         if (upgradeLevel == 1)
                         {
                             currentCost = 150;
-                            itemName = "Sword Level 2";
-                            description = "Increases sword damage and frequency";
+                            itemName = "Lingering Maxed";
+                            description = "Maximizes after-image duration";
                             upgradeValue = 15f; // Example: increased damage
                         }
-                        else if (upgradeLevel >= maxUpgradeLevel)
-                        {
-                            currentCost = 0;
-                            itemName = "Sword Max Level";
-                            description = "Maximum Sword Upgrade";
-                            upgradeValue = 20f; // Example: max damage
-                        }
                         break;
+                      
 
                     case UpgradeType.DamageBoost:
                         currentCost = baseCost + (upgradeLevel * 50); // Increasing cost

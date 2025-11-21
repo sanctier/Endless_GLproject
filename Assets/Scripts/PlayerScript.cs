@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections;
 using UnityEngine.SceneManagement; 
 using TMPro;
@@ -26,11 +27,47 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private Animator animator;
     private bool facingRight = true;
+    public bool IsFacingRight { get { return facingRight; } }
     private float currentHealth;
     public float maxHealth = 100f;
     private bool isDead = false;
 
+    [Header("Audio")]
+    public AudioClip attackClip;
+    public AudioSource audioSource;
+    [Range(0f,1f)] public float attackVolume = 1f;
+    public AudioClip hurtClip;
+    public AudioClip hurtClip2;
+    [Range(0f,1f)] public float hurtVolume = 1f;
+    public AudioClip deathClip;
+    [Range(0f,1f)] public float deathVolume = 1f;
+
+    // timestamps to prevent overlapping hurt/death sounds
+    private float lastHurtPlayTime = -Mathf.Infinity;
+    private float lastDeathPlayTime = -Mathf.Infinity;
+    // flip toggle to alternate between hurt clips
+    private bool useAlternateHurt = false;
+
     private int wavesSurvived = 0;
+    // allow external systems (shop, cutscenes) to disable player attacks
+    private bool canAttack = true;
+    // prevent spamming attacks: lock input until current attack finishes
+    private bool isAttacking = false;
+    public float attackLockDuration = 0.5f; // seconds to lock attack (match your animation)
+    private Coroutine attackLockCoroutine = null;
+
+    // Event invoked when an attack finishes (attack lock expires)
+    public Action OnAttackComplete;
+
+    public void SetCanAttack(bool allowed)
+    {
+        canAttack = allowed;
+        // stop any pending/playing attack audio when disabling attacks
+        if (!allowed && audioSource != null && audioSource.isPlaying)
+        {
+            try { audioSource.Stop(); } catch { }
+        }
+    }
 
     void Awake()
     {
@@ -54,6 +91,16 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        // ensure an AudioSource exists for playing attack sounds
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 0f; // make it 2D by default
+        }
         currentHealth = maxHealth;
         if (healthBar != null)
             healthBar.SetHealth(currentHealth, maxHealth);
@@ -94,8 +141,23 @@ public class PlayerController : MonoBehaviour
         // Attack input
         if (Input.GetMouseButtonDown(0))
         {
+            // prevent attacks while disabled (e.g., shop open) or while already attacking
+            if (!canAttack || isAttacking) return;
+
+            // trigger attack and lock further attacks until lock expires
             if (animator != null)
                 animator.SetTrigger("Attack");
+
+            // play attack sound if assigned
+            if (attackClip != null && audioSource != null)
+            {
+                audioSource.PlayOneShot(attackClip, attackVolume);
+            }
+
+            // start lock
+            isAttacking = true;
+            if (attackLockCoroutine != null) StopCoroutine(attackLockCoroutine);
+            attackLockCoroutine = StartCoroutine(AttackLockCoroutine());
             // You might want to add actual attack logic here
         }
 
@@ -158,6 +220,30 @@ public class PlayerController : MonoBehaviour
         if (animator != null)
             animator.SetTrigger("Hurt");
 
+        // Play hurt sound if assigned and player is still alive, but avoid overlapping
+        if (audioSource != null && (hurtClip != null || hurtClip2 != null) && currentHealth > 0f)
+        {
+            // choose which clip to play (alternate between two if both assigned)
+            AudioClip clipToPlay = null;
+            if (useAlternateHurt && hurtClip2 != null)
+                clipToPlay = hurtClip2;
+            else
+                clipToPlay = hurtClip != null ? hurtClip : hurtClip2; // fallback if one is missing
+
+            if (clipToPlay != null)
+            {
+                float now = Time.unscaledTime;
+                float hurtDuration = Mathf.Max(0.05f, clipToPlay.length);
+                if (now - lastHurtPlayTime >= hurtDuration)
+                {
+                    audioSource.PlayOneShot(clipToPlay, hurtVolume);
+                    lastHurtPlayTime = now;
+                    // flip for next hit so we alternate
+                    useAlternateHurt = !useAlternateHurt;
+                }
+            }
+        }
+
         if (currentHealth <= 0)
         {
             Die();
@@ -175,9 +261,29 @@ public class PlayerController : MonoBehaviour
         if (isDead) return;
         isDead = true;
 
+        // cancel any attack lock when dying
+        if (attackLockCoroutine != null)
+        {
+            try { StopCoroutine(attackLockCoroutine); } catch { }
+            attackLockCoroutine = null;
+        }
+        isAttacking = false;
+
         // Trigger Death animation
         if (animator != null)
             animator.SetTrigger("Death");
+
+        // Play death sound if assigned (play once, avoid overlapping)
+        if (audioSource != null && deathClip != null)
+        {
+            float now = Time.unscaledTime;
+            float deathDuration = Mathf.Max(0.05f, deathClip.length);
+            if (now - lastDeathPlayTime >= deathDuration)
+            {
+                audioSource.PlayOneShot(deathClip, deathVolume);
+                lastDeathPlayTime = now;
+            }
+        }
 
         // Update waves survived text
         if (wavesSurvivedText != null)
@@ -268,5 +374,21 @@ public class PlayerController : MonoBehaviour
         {
             WaveManager.Instance.OnWaveCompleted -= OnWaveCompleted;
         }
+    }
+
+    IEnumerator AttackLockCoroutine()
+    {
+        float t = 0f;
+        // Use unscaled time so pause doesn't affect attack unlocking
+        while (t < attackLockDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        isAttacking = false;
+        attackLockCoroutine = null;
+
+        try { OnAttackComplete?.Invoke(); } catch (Exception e) { Debug.LogException(e); }
     }
 }

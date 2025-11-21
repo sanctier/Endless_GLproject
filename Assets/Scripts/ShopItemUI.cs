@@ -1,8 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 
-public class ShopItemUI : MonoBehaviour
+public class ShopItemUI : MonoBehaviour, IPointerClickHandler
 {
     public Image itemIcon;
     public TextMeshProUGUI itemNameText;
@@ -59,7 +60,29 @@ public class ShopItemUI : MonoBehaviour
 
     void OnBuyButtonClick()
     {
-        ShopManager.Instance.TryBuyItem(currentItem);
+        // Detailed debug logging to trace buy attempts
+        Debug.Log($"OnBuyButtonClick: Trying to buy '{currentItem.itemName}' cost={currentItem.currentCost}");
+        if (CurrencyManager.Instance != null)
+            Debug.Log($"Current currency={CurrencyManager.Instance.GetCurrentCurrency()}");
+        else
+            Debug.Log("CurrencyManager.Instance is null");
+
+        if (ShopManager.Instance == null)
+        {
+            Debug.LogError("ShopManager.Instance is null when trying to buy");
+        }
+
+        bool result = false;
+        try
+        {
+            result = ShopManager.Instance.TryBuyItem(currentItem);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogException(ex);
+        }
+
+        Debug.Log($"TryBuyItem returned: {result}");
         UpdateButtonState();
     }
 
@@ -81,6 +104,15 @@ public class ShopItemUI : MonoBehaviour
         itemNameText.text = currentItem.itemName;          // <— refresh name
         descriptionText.text = currentItem.description;    // <— refresh desc
         costText.text = currentItem.currentCost > 0 ? currentItem.currentCost.ToString() : "";
+    }
+
+    // Allow buying by left-clicking anywhere on the item UI
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Left)
+        {
+            OnBuyButtonClick();
+        }
     }
 
 

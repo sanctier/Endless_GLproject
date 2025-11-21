@@ -41,6 +41,17 @@ public class SkeletonEnemy : MonoBehaviour
     public float fallbackShieldDuration = 1.0f;
     public float fallbackHitDuration = 0.6f;
 
+    [Header("Audio")]
+    public AudioClip attackClip;
+    [Range(0f,1f)] public float attackVolume = 1f;
+    public AudioClip blockClip;
+    [Range(0f,1f)] public float blockVolume = 1f;
+
+    private AudioSource audioSource;
+    // timestamps to prevent duplicate/overlapping sounds
+    private float lastAttackPlayTime = -Mathf.Infinity;
+    private float lastBlockPlayTime = -Mathf.Infinity;
+
     // store currently running fallback coroutine so we can cancel it when the animation event fires
     private Coroutine fallbackCoroutine = null;
 
@@ -51,6 +62,15 @@ public class SkeletonEnemy : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         myCollider = GetComponent<Collider2D>();
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        // ensure an AudioSource exists for playing sounds
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 1f; // spatialized
+        }
 
         // Set initial facing
         if (player != null && player.position.x < transform.position.x && facingRight) Flip();
@@ -111,6 +131,18 @@ public class SkeletonEnemy : MonoBehaviour
                 isBusy = true;
                 if (animator != null) animator.SetBool("isRunning", false);
 
+                // play block start sound once (avoid duplicates)
+                if (blockClip != null && audioSource != null)
+                {
+                    float nowBlock = Time.unscaledTime;
+                    float durBlock = Mathf.Max(0.05f, blockClip.length);
+                    if (nowBlock - lastBlockPlayTime >= durBlock)
+                    {
+                        audioSource.PlayOneShot(blockClip, blockVolume);
+                        lastBlockPlayTime = nowBlock;
+                    }
+                }
+
                 // start fallback in case animation event EndShield is missing
                 StartFallback(FallbackType.Shield);
             }
@@ -126,6 +158,18 @@ public class SkeletonEnemy : MonoBehaviour
                     if (animator != null) animator.SetTrigger("Attack2");
                     else Debug.LogWarning("Animator missing or Attack2 trigger not found.");
 
+                // play attack sound once (avoid duplicates)
+                if (attackClip != null && audioSource != null)
+                {
+                    float now = Time.unscaledTime;
+                    float dur = Mathf.Max(0.05f, attackClip.length);
+                    if (now - lastAttackPlayTime >= dur)
+                    {
+                        audioSource.PlayOneShot(attackClip, attackVolume);
+                        lastAttackPlayTime = now;
+                    }
+                }
+
                 isBusy = true;
 
                 // start fallback in case EndAttack animation event is missing
@@ -135,6 +179,7 @@ public class SkeletonEnemy : MonoBehaviour
                     attackHitApplied = false;
                     StartCoroutine(FallbackAttackHit(fallbackAttackDuration * 0.45f));
             }
+
 
             if (canStartAttack)
                 attackTimer = attackCooldown;

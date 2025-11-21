@@ -21,6 +21,16 @@ public class WaveManager : MonoBehaviour
     public Transform[] spawnPoints;
     public float timeBetweenWaves = 5f;
 
+    [Header("Special Events")]
+    [Range(0f,1f)] public float batEventChance = 0.4f; // 40% chance per wave
+    public GameObject batEventPrefab; // prefab to spawn for the bat event
+    public GameObject batEventUIText; // UI GameObject (e.g. Text on Canvas) to enable while event active
+    public float batEventDuration = 30f; // seconds the event lasts
+    [Tooltip("When true the bat event will run every wave (use for testing)")]
+    public bool forceBatEvent = false;
+    // ensure only one bat event can run at a time
+    private bool isBatEventActive = false;
+
     [Header("Difficulty Scaling")]
     public float enemyHealthMultiplier = 1.1f;
     public float enemyDamageMultiplier = 1.05f;
@@ -77,9 +87,74 @@ public class WaveManager : MonoBehaviour
 
         StartCoroutine(SpawnWave(wave));
 
+        // roll for bat event for this wave (or force it for testing)
+        if (!isBatEventActive && batEventPrefab != null && spawnPoints != null && spawnPoints.Length > 0)
+        {
+            float roll = Random.value;
+            Debug.Log($"BatEvent roll: chance={batEventChance}, roll={roll}, force={forceBatEvent}, isActive={isBatEventActive}");
+            if (forceBatEvent || roll <= batEventChance)
+            {
+                Debug.Log("BatEvent triggered this wave.");
+                StartCoroutine(RunBatEvent());
+            }
+            else
+            {
+                Debug.Log("BatEvent NOT triggered this wave.");
+            }
+        }
+        else if (isBatEventActive)
+        {
+            Debug.Log("BatEvent skipped because another bat event is already active.");
+        }
+
         // Trigger wave started event
         OnWaveStarted?.Invoke(currentWave + 1);
         Debug.Log($"Wave {currentWave + 1} started!");
+    }
+
+    IEnumerator RunBatEvent()
+    {
+        // mark event active so another won't be started while this one runs
+        isBatEventActive = true;
+
+        // enable UI text if assigned
+        if (batEventUIText != null)
+            batEventUIText.SetActive(true);
+
+        // spawn the bat at a random spawn point
+        Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
+        GameObject bat = Instantiate(batEventPrefab, spawnPoint.position, spawnPoint.rotation);
+
+        // Make the spawned bat effectively invulnerable / not part of spawner enemies by
+        // removing any EnemyHealth component so it cannot be killed by normal damage flow.
+        var enemyHealth = bat.GetComponent("EnemyHealth");
+        if (enemyHealth != null)
+        {
+            Debug.Log("Bat event: removing EnemyHealth component to make bat unkillable.");
+            Destroy(enemyHealth);
+        }
+
+        Debug.Log("Bat event started: spawned bat and enabled UI text.");
+
+        // wait for event duration
+        float t = 0f;
+        while (t < batEventDuration)
+        {
+            t += Time.deltaTime;
+            yield return null;
+        }
+
+        // disable UI and destroy spawned bat if it still exists
+        if (batEventUIText != null)
+            batEventUIText.SetActive(false);
+
+        if (bat != null)
+            Destroy(bat);
+
+        // mark event finished so a new one can be rolled in future waves
+        isBatEventActive = false;
+
+        Debug.Log("Bat event ended: UI hidden and bat destroyed. Event inactive.");
     }
 
     IEnumerator SpawnWave(Wave wave)

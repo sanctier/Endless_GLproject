@@ -162,6 +162,10 @@ MonoBehaviour:
     m_Bits: 256
   bloodSplatterPrefab: {fileID: 3322371274477771831, guid: 2393337177d92824e88c8ff0c479ffb6, type: 3}
   bloodSplatterOffset: {x: 0, y: -0.3}
+  attackClip: {fileID: 8300000, guid: 9e987304eb2ea1f498286f4fa1f22d48, type: 3}
+  attackVolume: 0.235
+  deathClip: {fileID: 8300000, guid: 1dbf723cb5e80e545afbb79ee77ab36e, type: 3}
+  deathVolume: 0.287
 --- !u!61 &1396253784377435305
 BoxCollider2D:
   m_ObjectHideFlags: 0

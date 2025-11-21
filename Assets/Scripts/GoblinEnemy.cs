@@ -15,6 +15,16 @@ public class GoblinEnemy : MonoBehaviour
     [Header("Death Effects")]
     public GameObject bloodSplatterPrefab; // Assign your blood splatter prefab in inspector
     public Vector2 bloodSplatterOffset = new Vector2(0, 0.5f); // Adjust based on your sprite
+    
+    [Header("Audio")]
+    public AudioClip attackClip;
+    [Range(0f,1f)] public float attackVolume = 1f;
+    public AudioClip deathClip;
+    [Range(0f,1f)] public float deathVolume = 1f;
+
+    private AudioSource audioSource;
+    // timestamp to prevent duplicate/overlapping attack sounds
+    private float lastAttackPlayTime = -Mathf.Infinity;
 
     private int currentHealth;
     private bool isDead = false;
@@ -34,6 +44,14 @@ public class GoblinEnemy : MonoBehaviour
         animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
         myCollider = GetComponent<Collider2D>();
+        // ensure an AudioSource exists for playing attack sounds
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 1f; // spatialized
+        }
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
         // Make sure the initial facing is correct
         if (player != null && player.position.x < transform.position.x)
@@ -85,6 +103,17 @@ public class GoblinEnemy : MonoBehaviour
                 animator.SetTrigger("Attack1");
             else
                 animator.SetTrigger("Attack2");
+            // play attack sound once (avoid duplicates)
+            if (attackClip != null && audioSource != null)
+            {
+                float now = Time.unscaledTime;
+                float dur = Mathf.Max(0.05f, attackClip.length);
+                if (now - lastAttackPlayTime >= dur)
+                {
+                    audioSource.PlayOneShot(attackClip, attackVolume);
+                    lastAttackPlayTime = now;
+                }
+            }
             attackTimer = attackCooldown;
         }
 
@@ -123,6 +152,11 @@ public class GoblinEnemy : MonoBehaviour
         
         // Spawn blood splatter effect
         SpawnBloodSplatter();
+        // play death sound once
+        if (deathClip != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(deathClip, deathVolume);
+        }
         
         if (CurrencyManager.Instance != null)
             CurrencyManager.Instance.AddCurrency(goldOnDeath);
