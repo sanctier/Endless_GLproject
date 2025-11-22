@@ -202,7 +202,7 @@ MonoBehaviour:
   moveSpeed: 8
   contactDamage: 7
   attackCooldown: 1.5
-  goldOnDeath: 10
+  goldOnDeath: 20
   damageLayer:
     serializedVersion: 2
     m_Bits: 256
@@ -216,3 +216,5 @@ MonoBehaviour:
   attackVolume: 0.89
   blockClip: {fileID: 8300000, guid: d7e591b27487bd24b98b9006273c0c78, type: 3}
   blockVolume: 0.963
+  skeletonDeathClip: {fileID: 8300000, guid: c5ca6cb0093255d4e9930f5973099fe3, type: 3}
+  skeletonDeathVolume: 1

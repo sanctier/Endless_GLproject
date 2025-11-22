@@ -223,6 +223,10 @@ MonoBehaviour:
   stunFlashRate: 1.67
   contactDamage: 10
   contactDamageCooldown: 1
+  batBiteClip: {fileID: 8300000, guid: c57fa87ce819f59408f9579e40d68a33, type: 3}
+  batBiteVolume: 0.286
+  batStunnedClip: {fileID: 8300000, guid: 10f76aebcee6259428e2a7689697ed56, type: 3}
+  batStunnedVolume: 1
 --- !u!1 &4785749136584897628
 GameObject:
   m_ObjectHideFlags: 0

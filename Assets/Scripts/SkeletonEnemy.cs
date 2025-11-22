@@ -46,6 +46,8 @@ public class SkeletonEnemy : MonoBehaviour
     [Range(0f,1f)] public float attackVolume = 1f;
     public AudioClip blockClip;
     [Range(0f,1f)] public float blockVolume = 1f;
+    public AudioClip skeletonDeathClip;
+    [Range(0f,1f)] public float skeletonDeathVolume = 1f;
 
     private AudioSource audioSource;
     // timestamps to prevent duplicate/overlapping sounds
@@ -225,6 +227,12 @@ public class SkeletonEnemy : MonoBehaviour
     {
         isDead = true;
         if (animator != null) animator.SetTrigger("Die");
+
+        // play death audio
+        if (skeletonDeathClip != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(skeletonDeathClip, skeletonDeathVolume);
+        }
 
         if (rb != null) rb.linearVelocity = Vector2.zero;
         if (myCollider != null) myCollider.enabled = false;

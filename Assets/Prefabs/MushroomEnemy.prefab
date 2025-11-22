@@ -177,7 +177,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 1
-  goldOnDeath: 1000
+  goldOnDeath: 10
   moveSpeed: 30
   explosionDamage: 50
   explosionRadius: 2

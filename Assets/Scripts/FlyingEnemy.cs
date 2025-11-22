@@ -69,6 +69,13 @@ public class FlyingEnemy : MonoBehaviour
     public float contactDamageCooldown = 1f; // seconds between applying contact damage
     private float lastContactDamageTime = -999f;
 
+    [Header("Audio")]
+    public AudioClip batBiteClip;
+    [Range(0f,1f)] public float batBiteVolume = 1f;
+    private AudioSource audioSource;
+    public AudioClip batStunnedClip;
+    [Range(0f,1f)] public float batStunnedVolume = 1f;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -88,6 +95,15 @@ public class FlyingEnemy : MonoBehaviour
         attackHashes = new int[attackStateNames.Length];
         for (int i = 0; i < attackStateNames.Length; i++)
             attackHashes[i] = Animator.StringToHash(attackStateNames[i]);
+
+        // ensure an AudioSource exists for playing attack sounds
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 1f; // spatialized 3D sound
+        }
     }
 
     void OnTriggerEnter2D(Collider2D collision)
@@ -381,6 +397,12 @@ public class FlyingEnemy : MonoBehaviour
             else animator.SetTrigger("Attack2");
         }
 
+        // play bite audio on attack
+        if (batBiteClip != null)
+        {
+            PlayOneShotExclusive(batBiteClip, batBiteVolume);
+        }
+
         // safety fallback in case animation event EndAttack doesn't fire
         StopFallback();
         fallbackCoroutine = StartCoroutine(FallbackClearBusy(attackFallbackDuration));
@@ -419,6 +441,9 @@ public class FlyingEnemy : MonoBehaviour
                 stunCoroutine = null;
             }
             ShowStunLabel();
+            // play stunned audio on refresh (exclusive)
+            if (batStunnedClip != null)
+                PlayOneShotExclusive(batStunnedClip, batStunnedVolume);
             stunCoroutine = StartCoroutine(StunRoutine());
             return;
         }
@@ -444,6 +469,9 @@ public class FlyingEnemy : MonoBehaviour
         }
 
         ShowStunLabel();
+        // play stunned audio on initial stun (exclusive)
+        if (batStunnedClip != null)
+            PlayOneShotExclusive(batStunnedClip, batStunnedVolume);
         stunCoroutine = StartCoroutine(StunRoutine());
     }
 
@@ -727,6 +755,15 @@ public class FlyingEnemy : MonoBehaviour
                 stunnedLabelInstance.SetActive(!stunnedLabelInstance.activeSelf);
             yield return new WaitForSeconds(interval);
         }
+    }
+
+    // Play a clip but ensure it is exclusive — stop any currently playing audio on the
+    // main AudioSource so clips do not overlap. This keeps sound effects from stacking.
+    void PlayOneShotExclusive(AudioClip clip, float volume)
+    {
+        if (clip == null || audioSource == null) return;
+        try { audioSource.Stop(); } catch { }
+        audioSource.PlayOneShot(clip, volume);
     }
 
     // (Removed SafeCompareTag) We now use damageLayer checks like GoblinEnemy

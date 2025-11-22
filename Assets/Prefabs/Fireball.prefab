@@ -181,3 +181,5 @@ MonoBehaviour:
   enemyLayer:
     serializedVersion: 2
     m_Bits: 0
+  fireballWhooshClip: {fileID: 8300000, guid: 1adccd798172a344b8ffbd95346e6c3c, type: 3}
+  fireballWhooshVolume: 1
