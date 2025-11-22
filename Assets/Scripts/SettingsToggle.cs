@@ -15,9 +15,12 @@ public class SettingsToggle : MonoBehaviour
     [Tooltip("Optional: a SettingsMenu component to call PauseGame/ResumeGame on.")]
     public SettingsMenu settingsMenu;
 
+    [Tooltip("Keyboard key used to toggle the settings panel (default 'P')")]
+    public KeyCode toggleKey = KeyCode.P;
+
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(toggleKey))
         {
             Toggle();
         }
@@ -29,7 +32,16 @@ public class SettingsToggle : MonoBehaviour
     public void Toggle()
     {
         if (settingsPanel == null)
+        {
+            Debug.LogWarning("SettingsToggle: settingsPanel is not assigned.");
             return;
+        }
+
+        // If no explicit SettingsMenu reference was provided, try to find one on the panel (works even if panel is inactive)
+        if (settingsMenu == null && settingsPanel != null)
+        {
+            settingsMenu = settingsPanel.GetComponent<SettingsMenu>();
+        }
 
         bool active = settingsPanel.activeSelf;
 

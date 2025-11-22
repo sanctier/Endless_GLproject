@@ -23,22 +23,63 @@ public class SettingsMenu : MonoBehaviour
 
     [Header("Behavior")]
     public bool pauseOnOpen = true;  // pause when settings open
+    [Tooltip("Keyboard key to toggle settings (Escape by default)")]
+    public KeyCode toggleKey = KeyCode.Escape;
 
     private bool isPaused = false;
     private const string MasterVolumePrefKey = "MasterVolume";
+    // keep a single active SettingsMenu instance to avoid multiple components responding to input
+    private static SettingsMenu ActiveInstance;
+    private bool wired = false;
 
     void Start()
     {
+        // detect duplicates
+        int found = FindObjectsOfType<SettingsMenu>().Length;
+        Debug.Log($"SettingsMenu: Start called on '{gameObject.name}'. Instances in scene={found}. GameObject active={gameObject.activeInHierarchy}, enabled={enabled}");
+
+        if (settingsPanel == null)
+        {
+            Debug.LogWarning("SettingsMenu: settingsPanel is not assigned in inspector. Toggle will do nothing.");
+        }
+
+        // Choose ActiveInstance: prefer an instance that has a valid settingsPanel assigned
+        if (ActiveInstance == null)
+        {
+            if (this.settingsPanel != null)
+            {
+                ActiveInstance = this;
+            }
+            else
+            {
+                // try to find any existing SettingsMenu in scene with settingsPanel assigned
+                var all = FindObjectsOfType<SettingsMenu>();
+                foreach (var sm in all)
+                {
+                    if (sm != this && sm.settingsPanel != null)
+                    {
+                        ActiveInstance = sm;
+                        break;
+                    }
+                }
+                if (ActiveInstance == null)
+                    ActiveInstance = this;
+            }
+        }
+
+        if (ActiveInstance != this)
+        {
+            Debug.LogWarning($"SettingsMenu: Another active SettingsMenu ('{ActiveInstance.gameObject.name}') exists. Disabling toggle behavior on '{gameObject.name}'.");
+            enabled = false; // disable this component so it won't respond to input
+            return;
+        }
+
         // start with panel hidden
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
 
         // wire up buttons if provided
-        if (resumeButton != null)
-            resumeButton.onClick.AddListener(ResumeGame);
-
-        if (quitButton != null)
-            quitButton.onClick.AddListener(QuitGame);
+        EnsureWired(settingsPanel);
 
         // load saved master volume (fallback to current AudioListener.volume)
         float savedVol = PlayerPrefs.GetFloat(MasterVolumePrefKey, AudioListener.volume);
@@ -53,11 +94,100 @@ public class SettingsMenu : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Ensure the UI references (buttons / slider) are assigned and wired. Accepts the panel GameObject
+    /// even if it's inactive. Safe to call multiple times.
+    /// </summary>
+    public void EnsureWired(GameObject panel)
+    {
+        if (wired) return;
+        // If fields are not assigned in inspector, try to find them under the provided panel
+        if (panel != null)
+        {
+            if (resumeButton == null)
+            {
+                // try to find by common names first
+                var btns = panel.GetComponentsInChildren<Button>(true);
+                foreach (var b in btns)
+                {
+                    var name = b.gameObject.name.ToLower();
+                    if (name.Contains("resume") || name.Contains("continue") || name.Contains("close"))
+                    {
+                        resumeButton = b; break;
+                    }
+                }
+                if (resumeButton == null && btns.Length > 0) resumeButton = btns[0];
+            }
+
+            if (quitButton == null)
+            {
+                var btns = panel.GetComponentsInChildren<Button>(true);
+                foreach (var b in btns)
+                {
+                    var name = b.gameObject.name.ToLower();
+                    if (name.Contains("quit") || name.Contains("exit") || name.Contains("back"))
+                    {
+                        quitButton = b; break;
+                    }
+                }
+                // if quit not found, try last button
+                if (quitButton == null && btns.Length > 1) quitButton = btns[btns.Length - 1];
+            }
+
+            if (masterVolumeSlider == null)
+            {
+                var sliders = panel.GetComponentsInChildren<Slider>(true);
+                foreach (var s in sliders)
+                {
+                    var name = s.gameObject.name.ToLower();
+                    if (name.Contains("volume") || name.Contains("master") || name.Contains("sound"))
+                    {
+                        masterVolumeSlider = s; break;
+                    }
+                }
+                if (masterVolumeSlider == null && sliders.Length > 0) masterVolumeSlider = sliders[0];
+            }
+        }
+
+        // Wire listeners (avoid duplicate wiring)
+        if (resumeButton != null)
+        {
+            resumeButton.onClick.RemoveListener(ResumeGame);
+            resumeButton.onClick.AddListener(ResumeGame);
+        }
+
+        if (quitButton != null)
+        {
+            quitButton.onClick.RemoveListener(QuitGame);
+            quitButton.onClick.AddListener(QuitGame);
+        }
+
+        if (masterVolumeSlider != null)
+        {
+            masterVolumeSlider.onValueChanged.RemoveListener(OnMasterVolumeChanged);
+            masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeChanged);
+            masterVolumeSlider.minValue = 0f;
+            masterVolumeSlider.maxValue = 1f;
+            masterVolumeSlider.value = AudioListener.volume;
+        }
+
+        wired = true;
+    }
+
     void Update()
     {
-        // Toggle settings panel with Escape key
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // Toggle settings panel with configured key. Also support legacy Input "Cancel" button.
+        bool pressed = false;
+        if (Input.GetKeyDown(toggleKey)) pressed = true;
+        try
         {
+            if (!pressed && Input.GetButtonDown("Cancel")) pressed = true;
+        }
+        catch { /* Input button may not be defined — ignore */ }
+
+        if (pressed)
+        {
+            Debug.Log("SettingsMenu: toggle key pressed");
             ToggleSettings();
         }
     }

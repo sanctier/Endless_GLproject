@@ -130,6 +130,13 @@ public class FlyingEnemy : MonoBehaviour
             ApplyStun();
             return;
         }
+
+        // Also respond to Slash tagged objects (e.g., after-image / slash prefabs)
+        if (collision.CompareTag("Slash"))
+        {
+            ApplyStun();
+            return;
+        }
     }
 
     void OnTriggerExit2D(Collider2D collision)
@@ -161,6 +168,13 @@ public class FlyingEnemy : MonoBehaviour
 
         // Accept hits from configured damage layer while staying in the trigger
         if (((1 << collision.gameObject.layer) & damageLayer) != 0)
+        {
+            ApplyStun();
+            return;
+        }
+
+        // Also respond to Slash tagged objects while staying in trigger
+        if (collision.CompareTag("Slash"))
         {
             ApplyStun();
             return;
@@ -197,6 +211,10 @@ public class FlyingEnemy : MonoBehaviour
 
             if (IsColliderPlayerAttacking(collision.collider))
                 ApplyStun();
+
+            // If hit by a Slash object (physics collision), stun as well
+            if (collision.collider.CompareTag("Slash"))
+                ApplyStun();
         }
     }
 
@@ -213,6 +231,9 @@ public class FlyingEnemy : MonoBehaviour
         if (collision.collider.CompareTag("Player"))
         {
             if (IsColliderPlayerAttacking(collision.collider))
+                ApplyStun();
+            // If staying in contact with a Slash object, stun as well
+            if (collision.collider.CompareTag("Slash"))
                 ApplyStun();
         }
     }

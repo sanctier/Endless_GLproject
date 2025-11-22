@@ -64,7 +64,7 @@ public class ShopItem
                         {
                             currentCost = 150;
                             itemName = "Lingering Maxed";
-                            description = "Maximizes after-image duration";
+                            description = "Maximum after-image Upgrade";
                             upgradeValue = 15f; // Example: increased damage
                         }
                         break;
