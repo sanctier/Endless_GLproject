@@ -170,5 +170,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfe3f36bcf715304ab6502a3e34ea765, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damagePerTick: 10
+  damagePerTick: 5
   tickInterval: 1
+  hitClip: {fileID: 8300000, guid: 9286f5dffc28242459c7f98c198c052c, type: 3}
+  hitVolume: 0.839

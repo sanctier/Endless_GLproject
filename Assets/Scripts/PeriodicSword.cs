@@ -20,6 +20,16 @@ public class PeriodicSword : MonoBehaviour
     private Transform playerTransform;
     private GameObject currentAfterImage;
     private bool isActivated = false;
+    // Audio + animator monitoring for playing a sound at attack start
+    [Header("Audio")]
+    public AudioClip slashClip;
+    [Range(0f,1f)] public float slashVolume = 1f;
+    public bool playSoundOnAttackStart = true;
+
+    private AudioSource audioSource;
+    private Animator playerAnimator;
+    private int[] attackStateHashes;
+    private int lastAnimatorHash = 0;
 
     void Start()
     {
@@ -42,6 +52,30 @@ public class PeriodicSword : MonoBehaviour
         // hide any sprite renderer on the controller itself
         var sr = GetComponent<SpriteRenderer>();
         if (sr != null) sr.enabled = false;
+
+        // cache player's animator (if available) and set up hashes
+        if (PlayerController.Instance != null)
+        {
+            playerAnimator = PlayerController.Instance.GetComponent<Animator>();
+            if (playerAnimator != null)
+            {
+                attackStateHashes = new int[] {
+                    Animator.StringToHash("Attack"),
+                    Animator.StringToHash("Attack1"),
+                    Animator.StringToHash("Attack2")
+                };
+                lastAnimatorHash = playerAnimator.GetCurrentAnimatorStateInfo(0).shortNameHash;
+            }
+        }
+
+        // ensure audio source exists for this controller
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 0f;
+        }
     }
 
     void OnDestroy()
@@ -67,6 +101,34 @@ public class PeriodicSword : MonoBehaviour
         if (!isActivated) return;
         if (currentAfterImage != null) return; // only one at a time
         SpawnOnce();
+    }
+
+    void Update()
+    {
+        if (!isActivated || !playSoundOnAttackStart || playerAnimator == null) return;
+
+        var s = playerAnimator.GetCurrentAnimatorStateInfo(0);
+        int currentHash = s.shortNameHash;
+
+        // detect entry into attack states
+        if (currentHash != lastAnimatorHash)
+        {
+            bool enteredAttack = false;
+            if (attackStateHashes != null)
+            {
+                foreach (var h in attackStateHashes)
+                {
+                    if (currentHash == h) { enteredAttack = true; break; }
+                }
+            }
+
+            if (enteredAttack)
+            {
+                PlaySlashSound();
+            }
+
+            lastAnimatorHash = currentHash;
+        }
     }
 
     private void SpawnOnce()
@@ -101,5 +163,12 @@ public class PeriodicSword : MonoBehaviour
         yield return new WaitForSeconds(lingerDuration);
         if (go != null) Destroy(go);
         if (currentAfterImage == go) currentAfterImage = null;
+    }
+
+    void PlaySlashSound()
+    {
+        if (slashClip == null || audioSource == null) return;
+        try { audioSource.Stop(); } catch { }
+        audioSource.PlayOneShot(slashClip, slashVolume);
     }
 }

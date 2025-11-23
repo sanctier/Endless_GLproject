@@ -14,6 +14,11 @@ public class SlashDamageZone : MonoBehaviour
     [Tooltip("Seconds between damage ticks")]
     public float tickInterval = 1f;
 
+    [Header("Audio")]
+    [Tooltip("Sound to play when an enemy is damaged by this slash (played at hit position)")]
+    public AudioClip hitClip;
+    [Range(0f,1f)] public float hitVolume = 1f;
+
     // track running coroutines per-collider so each enemy gets its own timer
     private Dictionary<Collider2D, Coroutine> running = new Dictionary<Collider2D, Coroutine>();
 
@@ -84,6 +89,7 @@ public class SlashDamageZone : MonoBehaviour
         if (eh != null)
         {
             eh.TakeDamage(dmg);
+            PlayHitSoundAt(col.transform.position);
             return;
         }
 
@@ -92,6 +98,7 @@ public class SlashDamageZone : MonoBehaviour
         if (gob != null)
         {
             gob.TakeDamage((int)dmg);
+            PlayHitSoundAt(col.transform.position);
             return;
         }
 
@@ -99,6 +106,7 @@ public class SlashDamageZone : MonoBehaviour
         if (mush != null)
         {
             mush.TakeDamage((int)dmg);
+            PlayHitSoundAt(col.transform.position);
             return;
         }
 
@@ -106,6 +114,7 @@ public class SlashDamageZone : MonoBehaviour
         if (skel != null)
         {
             skel.TakeDamage((int)dmg);
+            PlayHitSoundAt(col.transform.position);
             return;
         }
 
@@ -113,6 +122,7 @@ public class SlashDamageZone : MonoBehaviour
         if (fly != null)
         {
             fly.TakeDamage(dmg);
+            PlayHitSoundAt(col.transform.position);
             return;
         }
 
@@ -120,7 +130,17 @@ public class SlashDamageZone : MonoBehaviour
         try
         {
             col.gameObject.SendMessageUpwards("TakeDamage", (int)dmg, SendMessageOptions.DontRequireReceiver);
+            PlayHitSoundAt(col.transform.position);
         }
         catch { }
+    }
+
+    void PlayHitSoundAt(Vector3 pos)
+    {
+        if (hitClip == null) return;
+        // Play the local slash audio for slash damage. The centralized
+        // fireball audio is only invoked by the fireball code itself,
+        // so we should not suppress the slash clip here.
+        AudioSource.PlayClipAtPoint(hitClip, pos, hitVolume);
     }
 }

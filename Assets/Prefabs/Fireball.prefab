@@ -177,9 +177,9 @@ MonoBehaviour:
   verticalOffset: 0.5
   fireballIndex: 0
   totalFireballs: 1
-  damage: 10
+  damage: 5
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 0
-  fireballWhooshClip: {fileID: 8300000, guid: 1adccd798172a344b8ffbd95346e6c3c, type: 3}
-  fireballWhooshVolume: 1
+    m_Bits: 128
+  fireballHitClip: {fileID: 8300000, guid: 1adccd798172a344b8ffbd95346e6c3c, type: 3}
+  fireballHitVolume: 1

@@ -60,6 +60,10 @@ public class ShopItemUI : MonoBehaviour, IPointerClickHandler
 
     void OnBuyButtonClick()
     {
+        // play UI click sound immediately
+        if (ShopManager.Instance != null)
+            ShopManager.Instance.PlayUIClick();
+
         // Detailed debug logging to trace buy attempts
         Debug.Log($"OnBuyButtonClick: Trying to buy '{currentItem.itemName}' cost={currentItem.currentCost}");
         if (CurrencyManager.Instance != null)

@@ -48,14 +48,14 @@ public class ShopItem
                         if (upgradeLevel == 1)
                         {
                             currentCost = 200;
-                            itemName = "Fireball Level 2";
-                            description = "Adds a second rotating fireball";
+                            itemName = "Firespirit Level 2";
+                            description = "Adds a second rotating firespirit";
                         }
                         else if (upgradeLevel >= maxUpgradeLevel)
                         {
                             currentCost = 0;
-                            itemName = "Fireball Max Level";
-                            description = "Maximum Fireball Upgrade";
+                            itemName = "Firespirit Max Level";
+                            description = "Maximum Firespirit Upgrade";
                         }
                         break;
 

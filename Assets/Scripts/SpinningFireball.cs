@@ -19,6 +19,64 @@ public class SpinningFireball2D : MonoBehaviour
     [Header("Combat")]
     public int damage = 10;
     public LayerMask enemyLayer;
+    [Header("Audio")]
+    public AudioClip fireballHitClip;
+    [Range(0f,1f)] public float fireballHitVolume = 1f;
+
+    // Static provider so other scripts can play the fireball's hit audio without
+    // holding a direct reference to a fireball instance.
+    private static SpinningFireball2D s_provider;
+
+    void OnEnable()
+    {
+        // register first available provider
+        if (s_provider == null) s_provider = this;
+    }
+
+    void OnDisable()
+    {
+        if (s_provider == this) s_provider = null;
+    }
+
+    // Public static helper — other scripts (enemies, slash zones) can call this
+    // to play the configured fireball hit clip at a world position.
+    public static void PlayHitAt(Vector3 worldPos)
+    {
+        AudioClip clip = null;
+        float volume = 1f;
+
+        // Prefer registered provider
+        if (s_provider != null && s_provider.fireballHitClip != null)
+        {
+            clip = s_provider.fireballHitClip;
+            volume = s_provider.fireballHitVolume;
+        }
+        else
+        {
+            // Try to find any fireball in the scene with an assigned clip as a fallback
+            var all = Object.FindObjectsOfType<SpinningFireball2D>();
+            foreach (var f in all)
+            {
+                if (f != null && f.fireballHitClip != null)
+                {
+                    clip = f.fireballHitClip;
+                    volume = f.fireballHitVolume;
+                    s_provider = f; // cache for future calls
+                    break;
+                }
+            }
+        }
+
+        if (clip != null)
+            AudioSource.PlayClipAtPoint(clip, worldPos, volume);
+    }
+
+    // Returns true when a provider exists and it has a hit clip assigned.
+    // Other systems can call this to avoid playing duplicate local sounds.
+    public static bool HasProviderClip()
+    {
+        return s_provider != null && s_provider.fireballHitClip != null;
+    }
 
     private Transform playerTransform;
     private Vector2 currentVelocity;
@@ -90,7 +148,26 @@ public class SpinningFireball2D : MonoBehaviour
         {
             var enemy = collision.GetComponent<MonoBehaviour>();
             var takeDamageMethod = enemy?.GetType().GetMethod("TakeDamage");
-            takeDamageMethod?.Invoke(enemy, new object[] { damage });
+            try
+            {
+                // Play local fireball clip first so audio isn't prevented by the damage call
+                // (which may destroy the enemy or otherwise affect audio state).
+                if (fireballHitClip != null)
+                {
+                    AudioSource.PlayClipAtPoint(fireballHitClip, collision.transform.position, fireballHitVolume);
+                }
+                else
+                {
+                    PlayHitAt(collision.transform.position);
+                }
+
+                // Now apply damage to the enemy
+                takeDamageMethod?.Invoke(enemy, new object[] { damage });
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning(name + ": Exception invoking TakeDamage on " + (enemy ? enemy.name : "null") + " - " + ex.Message);
+            }
         }
     }
 }

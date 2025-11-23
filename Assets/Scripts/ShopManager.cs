@@ -17,6 +17,18 @@ public class ShopManager : MonoBehaviour
     public GameObject spinningFireballPrefab;
     public GameObject periodicSwordPrefab;
 
+    [Header("Audio")]
+    public AudioClip uiClickClip;
+    public AudioClip purchaseClip;
+    public AudioClip purchaseFailClip;
+    public AudioClip shopOpenClip;
+    public AudioClip shopCloseClip;
+    [Range(0f,1f)] public float uiClickVolume = 1f;
+    [Range(0f,1f)] public float purchaseVolume = 1f;
+    [Range(0f,1f)] public float shopOpenVolume = 1f;
+    [Range(0f,1f)] public float shopCloseVolume = 1f;
+    private AudioSource audioSource;
+
 
 
     private List<GameObject> activeUpgrades = new List<GameObject>();
@@ -35,6 +47,14 @@ public class ShopManager : MonoBehaviour
         }
         PlayerPrefs.DeleteAll();
 
+        // ensure AudioSource available for UI sounds
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 0f; // UI sounds as 2D
+        }
 
     }
 
@@ -345,10 +365,20 @@ public class ShopManager : MonoBehaviour
 
             Debug.Log($"Purchased: {item.itemName} (Level {item.upgradeLevel})");
             UpdateAllShopItemButtons();
+            // play purchase sound
+            if (purchaseClip != null && audioSource != null)
+            {
+                PlayOneShotExclusive(purchaseClip, purchaseVolume);
+            }
             return true;
         }
 
         Debug.Log($"TryBuyItem: Not enough currency or SpendCurrency returned false. spent={spent}");
+        // play fail sound
+        if (purchaseFailClip != null && audioSource != null)
+        {
+            PlayOneShotExclusive(purchaseFailClip, purchaseVolume);
+        }
         return false;
     }
 
@@ -427,6 +457,18 @@ public class ShopManager : MonoBehaviour
             shopPanel.SetActive(newState);
             Time.timeScale = newState ? 0f : 1f;
 
+            // play open/close audio
+            if (newState)
+            {
+                if (shopOpenClip != null && audioSource != null)
+                    PlayOneShotExclusive(shopOpenClip, shopOpenVolume);
+            }
+            else
+            {
+                if (shopCloseClip != null && audioSource != null)
+                    PlayOneShotExclusive(shopCloseClip, shopCloseVolume);
+            }
+
             // Disable player attacks while shop is open
             if (PlayerController.Instance != null)
                 PlayerController.Instance.SetCanAttack(!newState);
@@ -454,6 +496,10 @@ public class ShopManager : MonoBehaviour
             // Disable player attacks while shop is open
             if (PlayerController.Instance != null)
                 PlayerController.Instance.SetCanAttack(false);
+
+            // play open sound
+            if (shopOpenClip != null && audioSource != null)
+                PlayOneShotExclusive(shopOpenClip, shopOpenVolume);
         }
         else
         {
@@ -472,6 +518,10 @@ public class ShopManager : MonoBehaviour
             // Re-enable player attacks when closing shop
             if (PlayerController.Instance != null)
                 PlayerController.Instance.SetCanAttack(true);
+
+            // play close sound
+            if (shopCloseClip != null && audioSource != null)
+                PlayOneShotExclusive(shopCloseClip, shopCloseVolume);
         }
         else
         {
@@ -485,6 +535,21 @@ public class ShopManager : MonoBehaviour
         shopPanel = panel;
         shopItemsContainer = container;
         shopItemUIPrefab = prefab;
+    }
+
+    // Stop any current sound and play a UI clip so sounds don't overlap.
+    void PlayOneShotExclusive(AudioClip clip, float volume)
+    {
+        if (clip == null || audioSource == null) return;
+        try { audioSource.Stop(); } catch { }
+        audioSource.PlayOneShot(clip, volume);
+    }
+
+    // Called by UI when buy button is pressed to play the click sound immediately.
+    public void PlayUIClick()
+    {
+        if (uiClickClip != null && audioSource != null)
+            PlayOneShotExclusive(uiClickClip, uiClickVolume);
     }
 
 
