@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
 
@@ -64,6 +65,44 @@ public class CurrencyManager : MonoBehaviour
         // Load saved currency
         currentCurrency = PlayerPrefs.GetInt("PlayerCurrency", 0);
         UpdateCurrencyDisplay();
+    }
+
+    void OnEnable()
+    {
+        // Ensure we re-find the UI when scenes load (Text may be recreated)
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // If the currencyText reference was lost (UI recreated), try to find it again
+        if (currencyText == null)
+        {
+            GameObject textObj = GameObject.Find("CurrencyText");
+            if (textObj != null)
+            {
+                currencyText = textObj.GetComponent<TextMeshProUGUI>();
+                if (currencyText == null)
+                {
+                    Debug.LogError("CurrencyText GameObject doesn't have TextMeshProUGUI component!");
+                }
+                else
+                {
+                    originalTextScale = currencyText.transform.localScale;
+                    UpdateCurrencyDisplay();
+                }
+            }
+        }
+        else
+        {
+            // Ensure display is up-to-date after scene load
+            UpdateCurrencyDisplay();
+        }
     }
 
     public void AddCurrency(int amount)
