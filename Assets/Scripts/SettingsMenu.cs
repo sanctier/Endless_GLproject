@@ -6,6 +6,7 @@ using UnityEditor;
 #endif
 using UnityEngine.UI;
 using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Simple settings menu helper: pause/resume and quit the game.
@@ -25,6 +26,8 @@ public class SettingsMenu : MonoBehaviour
     public bool pauseOnOpen = true;  // pause when settings open
     [Tooltip("Keyboard key to toggle settings (Escape by default)")]
     public KeyCode toggleKey = KeyCode.Escape;
+    [Tooltip("Scene name to return to when 'Back to Start' is invoked")]
+    public string startSceneName = "StartScene";
 
     private bool isPaused = false;
     private const string MasterVolumePrefKey = "MasterVolume";
@@ -256,6 +259,23 @@ public class SettingsMenu : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    /// <summary>
+    /// Resume and load the Start scene. Useful for a "Back to Start" button in the settings.
+    /// </summary>
+    public void BackToStart()
+    {
+        // ensure game is resumed so timeScale and audio are restored
+        ResumeGame();
+
+        if (string.IsNullOrEmpty(startSceneName))
+        {
+            Debug.LogError("SettingsMenu: startSceneName is empty. Cannot load Start scene.");
+            return;
+        }
+
+        SceneManager.LoadScene(startSceneName);
     }
 
     void OnDestroy()
