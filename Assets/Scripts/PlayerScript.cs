@@ -212,9 +212,13 @@ public class PlayerController : MonoBehaviour
     {
         if (isDead) return;
 
+        Debug.Log($"PlayerController.TakeDamage called. damage={damage} currentHealth(before)={currentHealth}");
+
         currentHealth -= damage;
         if (healthBar != null)
             healthBar.SetHealth(currentHealth, maxHealth);
+
+        Debug.Log($"PlayerController.TakeDamage applied. currentHealth(after)={currentHealth}");
 
         // Trigger Hurt animation
         if (animator != null)
@@ -375,6 +379,11 @@ public class PlayerController : MonoBehaviour
             WaveManager.Instance.OnWaveCompleted -= OnWaveCompleted;
         }
     }
+
+    // Damage from enemies is handled by their animation events (they call
+    // PlayerController.TakeDamage directly) or by dedicated attack hitboxes.
+    // Removing tag-based trigger handlers avoids runtime warnings when tags
+    // like `BossAttack` are not defined in the project.
 
     IEnumerator AttackLockCoroutine()
     {

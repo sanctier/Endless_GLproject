@@ -65,6 +65,7 @@
     <Compile Include="Assets\Bandits - Pixel Art\Demo\Sensor_Bandit.cs" />
     <Compile Include="Assets\Scripts\FlyingEnemy.cs" />
     <Compile Include="Assets\Scripts\SettingsToggle.cs" />
+    <Compile Include="Assets\Scripts\BossBandit.cs" />
     <Compile Include="Assets\Scripts\ShopItemUI.cs" />
     <Compile Include="Assets\Scripts\GoblinEnemy.cs" />
     <Compile Include="Assets\Scripts\EnemyAttack.cs" />

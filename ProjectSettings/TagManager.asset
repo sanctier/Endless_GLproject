@@ -7,6 +7,7 @@ TagManager:
   - Enemy
   - Fireball
   - Slash
+  - BossBandit
   layers:
   - Default
   - TransparentFX
