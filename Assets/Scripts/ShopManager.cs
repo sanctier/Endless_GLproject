@@ -33,6 +33,17 @@ public class ShopManager : MonoBehaviour
 
     private List<GameObject> activeUpgrades = new List<GameObject>();
     private int fireballCount = 0;
+    // Whether the boss has been defeated (unlocks certain shop items)
+    public bool bossDefeated = false;
+
+    // Called by enemies (e.g., BossBandit) when the boss is killed
+    public void NotifyBossDefeated()
+    {
+        if (bossDefeated) return;
+        bossDefeated = true;
+        Debug.Log("ShopManager: Boss defeated — unlocking boss-locked shop items.");
+        UpdateAllShopItemButtons();
+    }
 
     void Awake()
     {
@@ -135,6 +146,18 @@ public class ShopManager : MonoBehaviour
         }
     }
 
+    // Return true if the given upgrade type has been purchased (upgradeLevel > 0)
+    public bool IsPurchased(ShopItem.UpgradeType type)
+    {
+        if (shopItems == null) return false;
+        foreach (var si in shopItems)
+        {
+            if (!si.consumable && si.upgradeType == type)
+                return si.upgradeLevel > 0;
+        }
+        return false;
+    }
+
 
     void InitializeShop()
     {
@@ -162,6 +185,13 @@ public class ShopManager : MonoBehaviour
         }
 
         // Create shop items
+        // Ensure AirSlash items are boss-locked by default
+        foreach (ShopItem si in shopItems)
+        {
+            if (!si.consumable && si.upgradeType == ShopItem.UpgradeType.AirSlash)
+                si.requiresBossDefeated = true;
+        }
+
         foreach (ShopItem item in shopItems)
         {
             GameObject itemUI = Instantiate(shopItemUIPrefab, shopItemsContainer);
@@ -179,6 +209,9 @@ public class ShopManager : MonoBehaviour
 
     void ApplyItemEffect(ShopItem item)
     {
+        Debug.Log($"ApplyItemEffect called for item='{item.itemName}' type={item.upgradeType} consumable={item.consumable} upgradeValue={item.upgradeValue} upgradeLevel={item.upgradeLevel}");
+
+        // Consumable items: handle by itemName first, then fallback to upgradeType
         if (item.consumable)
         {
             switch (item.itemName)
@@ -187,50 +220,84 @@ public class ShopManager : MonoBehaviour
                     if (PlayerController.Instance != null)
                         PlayerController.Instance.Heal(50);
                     break;
+
                 case "Temporary Damage Boost":
                     if (PlayerController.Instance != null)
                         PlayerController.Instance.AddTemporaryDamageBoost(10, 30f);
                     break;
+
                 case "Health Boost":
                     if (PlayerController.Instance != null)
-                        PlayerController.Instance.Heal(5);
-                    break;
-            }
-        }
-        else
-        {
-            if (PlayerController.Instance == null)
-            {
-                Debug.LogError("PlayerController instance not found!");
-                return;
-            }
-
-            switch (item.upgradeType)
-            {
-                case ShopItem.UpgradeType.SpinningFireball:
-                    UpgradeFireball(item.upgradeLevel);
-                    break;
-
-                case ShopItem.UpgradeType.PeriodicSword:
-                    ActivatePeriodicSword();
-                    break;
-
-                case ShopItem.UpgradeType.HealthBoost:
-
-                    if (PlayerController.Instance != null)
                     {
-                        PlayerController.Instance.IncreaseMaxHealth((int)item.upgradeValue);
-                        PlayerController.Instance.Heal((int)item.upgradeValue);
+                        float consumableHeal = (item.upgradeValue > 0f) ? item.upgradeValue : 5f;
+                        Debug.Log($"ShopManager: Applying consumable Health Boost heal={consumableHeal}");
+                        PlayerController.Instance.Heal(consumableHeal);
                     }
                     break;
-                case ShopItem.UpgradeType.DamageBoost:
-                    PlayerController.Instance.AddPermanentDamageBoost(item.upgradeValue);
-                    break;
 
-                case ShopItem.UpgradeType.SpeedBoost:
-                    PlayerController.Instance.AddSpeedBoost(item.upgradeValue);
-                    break;
+                // other consumable names fall through
             }
+
+            // Fallback by upgradeType for consumable health items
+            // Determine heal amount with a name-based fallback for misconfigured items
+            string nameLower = (item.itemName != null) ? item.itemName.ToLower() : "";
+            bool nameIndicatesBig = nameLower.Contains("mega") || nameLower.Contains("big") || nameLower.Contains("mega health") || nameLower.Contains("mega boost");
+
+            if (item.upgradeType == ShopItem.UpgradeType.BigHealthBoost || (item.upgradeType == ShopItem.UpgradeType.HealthBoost && nameIndicatesBig))
+            {
+                float fallbackHeal = (item.upgradeValue > 0f) ? item.upgradeValue : 50f; // use inspector value when present
+                Debug.Log($"ShopManager: Fallback consumable BigHealthBoost heal={fallbackHeal} (nameIndicatesBig={nameIndicatesBig})");
+                if (PlayerController.Instance != null) PlayerController.Instance.Heal(fallbackHeal);
+            }
+            else if (item.upgradeType == ShopItem.UpgradeType.HealthBoost)
+            {
+                float fallbackHeal = (item.upgradeValue > 0f) ? item.upgradeValue : 5f;
+                Debug.Log($"ShopManager: Fallback consumable HealthBoost heal={fallbackHeal}");
+                if (PlayerController.Instance != null) PlayerController.Instance.Heal(fallbackHeal);
+            }
+
+            return;
+        }
+
+        // Non-consumable (permanent) items: require a valid player instance
+        if (PlayerController.Instance == null)
+        {
+            Debug.LogError("PlayerController instance not found!");
+            return;
+        }
+
+        switch (item.upgradeType)
+        {
+            case ShopItem.UpgradeType.SpinningFireball:
+                UpgradeFireball(item.upgradeLevel);
+                break;
+
+            case ShopItem.UpgradeType.PeriodicSword:
+                ActivatePeriodicSword();
+                break;
+
+            case ShopItem.UpgradeType.AirSlash:
+                ActivateAirSlash();
+                break;
+
+            case ShopItem.UpgradeType.HealthBoost:
+                // Treat permanent HealthBoost purchase as an immediate small heal.
+                // Prefer inspector `upgradeValue` when present (supports fractional heals).
+                PlayerController.Instance.Heal((item.upgradeValue > 0f) ? item.upgradeValue : 5f);
+                break;
+
+            case ShopItem.UpgradeType.BigHealthBoost:
+                // Treat BigHealthBoost as a larger heal (prefer inspector value).
+                PlayerController.Instance.Heal((item.upgradeValue > 0f) ? item.upgradeValue : 50f);
+                break;
+
+            case ShopItem.UpgradeType.DamageBoost:
+                PlayerController.Instance.AddPermanentDamageBoost(item.upgradeValue);
+                break;
+
+            case ShopItem.UpgradeType.SpeedBoost:
+                PlayerController.Instance.AddSpeedBoost(item.upgradeValue);
+                break;
         }
     }
 
@@ -325,10 +392,27 @@ public class ShopManager : MonoBehaviour
         activeUpgrades.Add(sword);
     }
 
+    void ActivateAirSlash()
+    {
+        if (PlayerController.Instance == null) return;
+
+        var existing = PlayerController.Instance.GetComponent<AirSlash>();
+        if (existing != null)
+        {
+            existing.enabled = true;
+            PlayerController.Instance.airSlash = existing;
+            Debug.Log("ActivateAirSlash: Enabled AirSlash on player.");
+            return;
+        }
+
+        Debug.LogWarning("ActivateAirSlash: AirSlash component not found on player. Please add AirSlash to the player GameObject.");
+    }
+
 
     public bool TryBuyItem(ShopItem item)
     {
         Debug.Log($"TryBuyItem: attempting purchase '{item.itemName}' cost={item.currentCost}");
+        Debug.Log($"TryBuyItem DETAILS: consumable={item.consumable} upgradeType={item.upgradeType} upgradeValue={item.upgradeValue} upgradeLevel={item.upgradeLevel}");
 
         if (!item.consumable && item.upgradeLevel >= item.maxUpgradeLevel)
         {
@@ -408,10 +492,15 @@ public class ShopManager : MonoBehaviour
 
                 if (item.upgradeLevel > 0)
                 {
-                    // Apply all upgrades up to the current level
-                    for (int i = 1; i <= item.upgradeLevel; i++)
+                    // Apply permanent upgrades on load EXCEPT health boosts.
+                    // Health boosts are intended to act as heals at purchase time
+                    // and should NOT re-heal the player when loading saved data.
+                    if (item.upgradeType != ShopItem.UpgradeType.HealthBoost && item.upgradeType != ShopItem.UpgradeType.BigHealthBoost)
                     {
-                        ApplyItemEffect(item);
+                        for (int i = 1; i <= item.upgradeLevel; i++)
+                        {
+                            ApplyItemEffect(item);
+                        }
                     }
                 }
             }

@@ -312,6 +312,10 @@ public class BossBandit : MonoBehaviour
 
         if (CurrencyManager.Instance != null)
             CurrencyManager.Instance.AddCurrency(goldOnDeath);
+        if (ShopManager.Instance != null)
+        {
+            try { ShopManager.Instance.NotifyBossDefeated(); } catch { }
+        }
         if (WaveManager.Instance != null)
             WaveManager.Instance.EnemyDefeated();
 

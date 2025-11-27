@@ -8,6 +8,7 @@ TagManager:
   - Fireball
   - Slash
   - BossBandit
+  - AirSlash
   layers:
   - Default
   - TransparentFX

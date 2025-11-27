@@ -31,6 +31,9 @@ public class PlayerController : MonoBehaviour
     private float currentHealth;
     public float maxHealth = 100f;
     private bool isDead = false;
+    [Header("Abilities")]
+    [Tooltip("Optional reference to the AirSlash helper on the player. If null it will be auto-resolved.")]
+    public AirSlash airSlash;
 
     [Header("Audio")]
     public AudioClip attackClip;
@@ -91,6 +94,19 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        // Resolve AirSlash reference if not assigned in inspector
+        if (airSlash == null)
+            airSlash = GetComponent<AirSlash>();
+        // If AirSlash component exists, disable it by default unless already purchased
+        if (airSlash != null)
+        {
+            bool purchased = false;
+            if (ShopManager.Instance != null)
+                purchased = ShopManager.Instance.IsPurchased(ShopItem.UpgradeType.AirSlash);
+            airSlash.enabled = purchased;
+            if (purchased)
+                PlayerController.Instance.airSlash = airSlash;
+        }
         // ensure an AudioSource exists for playing attack sounds
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
@@ -154,6 +170,8 @@ public class PlayerController : MonoBehaviour
                 audioSource.PlayOneShot(attackClip, attackVolume);
             }
 
+            // AirSlash is spawned by animation events. Do not spawn here.
+
             // start lock
             isAttacking = true;
             if (attackLockCoroutine != null) StopCoroutine(attackLockCoroutine);
@@ -202,8 +220,13 @@ public class PlayerController : MonoBehaviour
 
     public void IncreaseMaxHealth(float amount)
     {
+        // Only increase the maximum health. Do not automatically change currentHealth
+        // so that upgrades modify the max without instantly replenishing the player's
+        // current health unless an explicit heal is requested.
         maxHealth += amount;
-        currentHealth += amount;
+        // Ensure current health does not exceed the new max
+        if (currentHealth > maxHealth)
+            currentHealth = maxHealth;
         if (healthBar != null)
             healthBar.SetHealth(currentHealth, maxHealth);
     }
@@ -333,6 +356,28 @@ public class PlayerController : MonoBehaviour
     public float GetDamage()
     {
         return (baseDamage * damageMultiplier) + temporaryDamageBoost;
+    }
+
+    // Animation Event helper: call this from the Player's animation event list
+    // (Animation window shows methods on the GameObject with the Animator, so
+    // it's convenient to call the AirSlash spawn through the PlayerController).
+    public void SpawnAirSlashFromAnimation()
+    {
+        try
+        {
+            // Ensure the player has purchased the AirSlash before forwarding the animation event.
+            if (ShopManager.Instance != null && !ShopManager.Instance.IsPurchased(ShopItem.UpgradeType.AirSlash))
+                return;
+
+            if (airSlash == null)
+                airSlash = GetComponent<AirSlash>();
+            if (airSlash != null)
+                airSlash.SpawnAirSlashEvent();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+        }
     }
 
     // ===== DEATH CANVAS BUTTON FUNCTIONS =====

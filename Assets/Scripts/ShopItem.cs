@@ -13,8 +13,10 @@ public class ShopItem
     public Sprite icon;
     public string description;
     public bool consumable = false;
+    // If true, this item cannot be purchased until the boss bandit has been defeated
+    public bool requiresBossDefeated = false;
 
-    public enum UpgradeType { SpinningFireball, PeriodicSword, HealthBoost, DamageBoost, SpeedBoost }
+    public enum UpgradeType { SpinningFireball, PeriodicSword, HealthBoost, DamageBoost, SpeedBoost, AirSlash, BigHealthBoost }
     public UpgradeType upgradeType;
     public float upgradeValue;
 
@@ -77,12 +79,19 @@ public class ShopItem
                         upgradeValue = 5 + (upgradeLevel * 2);
                         break;
 
-                    // In ShopItem.cs, modify the HealthBoost case:
+                    // Health boost should increase by small increments (5 per purchase)
                     case UpgradeType.HealthBoost:
-                        currentCost = baseCost + (upgradeLevel * 40);
-                        itemName = $"Health Boost Level {upgradeLevel}"; // Changed from upgradeLevel + 1
-                        description = $"Permanently increases max health by {10 + (upgradeLevel * 5)}";
-                        upgradeValue = 10 + (upgradeLevel * 5); // This line was missing!
+                        currentCost = baseCost + (upgradeLevel * 0);
+                        upgradeValue = 2.5f; // +5 HP per purchase
+                        itemName = $"Health Boost Level {upgradeLevel}";
+                        description = $"Heals player by {upgradeValue}";
+                        break;
+
+                    case UpgradeType.BigHealthBoost:
+                        currentCost = baseCost + (upgradeLevel * 0);
+                        upgradeValue = 25f; // Big boost: +50 HP
+                        itemName = $"Big Health Boost Level {upgradeLevel}";
+                        description = $"Heals player by {upgradeValue}";
                         break;
 
                     case UpgradeType.SpeedBoost:
@@ -108,6 +117,23 @@ public class ShopItem
         if (upgradeValues != null && upgradeLevel - 1 < upgradeValues.Length)
         {
             upgradeValue = upgradeValues[upgradeLevel - 1];
+        }
+
+        // Ensure sensible defaults for health-type upgrades in case no
+        // upgradeValues were provided (common when using upgradeCosts arrays
+        // or inspector-configured data). This guarantees HealthBoost always
+        // yields +5 and BigHealthBoost yields +50 when purchased.
+        if (upgradeValue == 0f)
+        {
+            switch (upgradeType)
+            {
+                case UpgradeType.HealthBoost:
+                    upgradeValue = 5f;
+                    break;
+                case UpgradeType.BigHealthBoost:
+                    upgradeValue = 50f;
+                    break;
+            }
         }
 
         return currentCost;

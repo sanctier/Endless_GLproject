@@ -35,6 +35,19 @@ public class ShopItemUI : MonoBehaviour, IPointerClickHandler
         RefreshTexts();
         Debug.Log($"[UpdateButtonState] {currentItem.itemName} | Level: {currentItem.upgradeLevel}/{currentItem.maxUpgradeLevel} | Cost: {currentItem.currentCost}");
 
+        // If this item requires the boss to be defeated, check that first
+        if (currentItem.requiresBossDefeated)
+        {
+            bool bossDone = ShopManager.Instance != null && ShopManager.Instance.bossDefeated;
+            if (!bossDone)
+            {
+                buyButton.interactable = false;
+                buttonText.text = "Locked";
+                costText.text = "";
+                return;
+            }
+        }
+
         if (!currentItem.consumable && currentItem.upgradeLevel >= currentItem.maxUpgradeLevel)
         {
             buyButton.interactable = false;
@@ -74,6 +87,20 @@ public class ShopItemUI : MonoBehaviour, IPointerClickHandler
         if (ShopManager.Instance == null)
         {
             Debug.LogError("ShopManager.Instance is null when trying to buy");
+        }
+
+        // Prevent buying if item is boss-locked and boss not defeated
+        if (currentItem.requiresBossDefeated)
+        {
+            if (ShopManager.Instance == null || !ShopManager.Instance.bossDefeated)
+            {
+                Debug.Log("OnBuyButtonClick: Item is locked until boss is defeated.");
+                // play fail sound if available
+                if (ShopManager.Instance != null && ShopManager.Instance.purchaseFailClip != null)
+                    ShopManager.Instance.PlayUIClick();
+                UpdateButtonState();
+                return;
+            }
         }
 
         bool result = false;

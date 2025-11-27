@@ -1108,6 +1108,7 @@ GameObject:
   m_Component:
   - component: {fileID: 292886531}
   - component: {fileID: 292886532}
+  - component: {fileID: 292886533}
   m_Layer: 9
   m_Name: SlashSpawn
   m_TagString: Untagged
@@ -1124,7 +1125,7 @@ Transform:
   m_GameObject: {fileID: 292886530}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 0.85, z: 0}
+  m_LocalPosition: {x: -1.18, y: 0.61, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1149,6 +1150,52 @@ MonoBehaviour:
   slashClip: {fileID: 0}
   slashVolume: 0.518
   playSoundOnAttackStart: 1
+--- !u!61 &292886533
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 292886530}
+  m_Enabled: 0
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
 --- !u!1 &327768372
 GameObject:
   m_ObjectHideFlags: 0
@@ -1809,6 +1856,102 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &521730893
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 521730894}
+  - component: {fileID: 521730895}
+  - component: {fileID: 521730896}
+  m_Layer: 9
+  m_Name: AirSlashSpawn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &521730894
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 521730893}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.4, y: 0.61, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1057257055}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!61 &521730895
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 521730893}
+  m_Enabled: 0
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
+--- !u!114 &521730896
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 521730893}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 886c467a7a92656439735f0e494e0f95, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  airSlashPrefab: {fileID: 2508320826629328624, guid: 60e694da4955a2344a21f2415b3dbf16, type: 3}
+  airSlashSpawn: {fileID: 521730894}
+  prefabFacesRight: 1
+  debugOrientation: 1
+  cooldown: 3.5
 --- !u!1 &531046711
 GameObject:
   m_ObjectHideFlags: 0
@@ -2051,7 +2194,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &581172697
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3277,7 +3420,7 @@ RectTransform:
   m_Father: {fileID: 715827303}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3816,6 +3959,7 @@ MonoBehaviour:
   gameOverCanvas: {fileID: 226256505}
   wavesSurvivedText: {fileID: 1646302164}
   maxHealth: 100
+  airSlash: {fileID: 521730896}
   attackClip: {fileID: 8300000, guid: 603aaa53f6796804ba9009f513bf2526, type: 3}
   audioSource: {fileID: 1057257060}
   attackVolume: 0.467
@@ -3839,6 +3983,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 292886531}
+  - {fileID: 521730894}
   - {fileID: 1033486229}
   - {fileID: 990534287}
   - {fileID: 336732358}
@@ -4361,8 +4506,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 53866735}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -4422,7 +4567,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1223652549
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4781,9 +4926,9 @@ MonoBehaviour:
   bloodSplatterPrefab: {fileID: 0}
   bloodSplatterOffset: {x: 0, y: 0.5}
   attackClip: {fileID: 8300000, guid: 603aaa53f6796804ba9009f513bf2526, type: 3}
-  attackVolume: 1
+  attackVolume: 0.33
   deathClip: {fileID: 8300000, guid: 6a9ec019a37283745a968c5729625379, type: 3}
-  deathVolume: 1
+  deathVolume: 0.35
   hpTextOffset: {x: 0, y: 1.2, z: 0}
   hpTextSize: 3
   attackPoint: {fileID: 0}
@@ -4798,11 +4943,11 @@ MonoBehaviour:
   recoverDuration: 2
   recoverAnimSpeed: 0.6
   bossMusicClip: {fileID: 8300000, guid: f7ff6badc2a8a624baf118753562301f, type: 3}
-  bossMusicVolume: 0.456
+  bossMusicVolume: 0.24
   recoverMusicClip: {fileID: 8300000, guid: dc5313adfffb5ed4d94f62697656c8a5, type: 3}
-  recoverMusicVolume: 1
+  recoverMusicVolume: 0.23
   secondPhaseMusicClip: {fileID: 8300000, guid: f4a18ed617fd4734292d33badca0fe44, type: 3}
-  secondPhaseMusicVolume: 0.667
+  secondPhaseMusicVolume: 0.26
 --- !u!212 &1416173824
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -6063,8 +6208,25 @@ MonoBehaviour:
     icon: {fileID: -600950325220626997, guid: d7db07ef4a4cdb6419ff930dc116cde1, type: 3}
     description: Replenish your health alittle.
     consumable: 1
+    requiresBossDefeated: 0
     upgradeType: 2
-    upgradeValue: 0
+    upgradeValue: 2.5
+    upgradeCosts: 
+    upgradeNames: []
+    upgradeDescriptions: []
+    upgradeValues: []
+    disableAutoUpgrade: 1
+  - itemName: Big Health Boost
+    baseCost: 0
+    currentCost: 120
+    upgradeLevel: 1
+    maxUpgradeLevel: 1
+    icon: {fileID: -600950325220626997, guid: d7db07ef4a4cdb6419ff930dc116cde1, type: 3}
+    description: Replenish your health by alot.
+    consumable: 1
+    requiresBossDefeated: 0
+    upgradeType: 6
+    upgradeValue: 25
     upgradeCosts: 
     upgradeNames: []
     upgradeDescriptions: []
@@ -6078,6 +6240,7 @@ MonoBehaviour:
     icon: {fileID: -5323280801719944925, guid: 3e1f9eabbfffa6c45b06c081e1687df8, type: 3}
     description: Rotates a firespirit around your body.
     consumable: 0
+    requiresBossDefeated: 0
     upgradeType: 0
     upgradeValue: 0
     upgradeCosts: c8000000
@@ -6095,7 +6258,25 @@ MonoBehaviour:
     icon: {fileID: -6352227616718521930, guid: 9a1af56fb6ab5fb4e9949448a3d04963, type: 3}
     description: Leaves after-image of your slashing.
     consumable: 0
+    requiresBossDefeated: 0
     upgradeType: 1
+    upgradeValue: 0
+    upgradeCosts: 
+    upgradeNames: []
+    upgradeDescriptions: []
+    upgradeValues: []
+    disableAutoUpgrade: 1
+  - itemName: Air Slash
+    baseCost: 350
+    currentCost: 0
+    upgradeLevel: 1
+    maxUpgradeLevel: 1
+    icon: {fileID: -6352227616718521930, guid: 9a1af56fb6ab5fb4e9949448a3d04963, type: 3}
+    description: Your slashes clear the way, able to hone it after killing a close
+      relative.
+    consumable: 0
+    requiresBossDefeated: 0
+    upgradeType: 5
     upgradeValue: 0
     upgradeCosts: 
     upgradeNames: []
@@ -6116,6 +6297,7 @@ MonoBehaviour:
   purchaseVolume: 1
   shopOpenVolume: 1
   shopCloseVolume: 1
+  bossDefeated: 0
 --- !u!1 &1990380685
 GameObject:
   m_ObjectHideFlags: 0
