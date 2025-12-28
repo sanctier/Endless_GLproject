@@ -21,6 +21,12 @@ public class WaveManager : MonoBehaviour
     public Transform[] spawnPoints;
     public float timeBetweenWaves = 5f;
 
+    [Header("Boss Settings")]
+    [Tooltip("Boss prefab to spawn every 10th wave")]
+    public GameObject bossPrefab;
+    [Tooltip("When true the boss will spawn on wave 1 (use for testing)")]
+    public bool forceBossSpawn = false;
+
     [Header("Special Events")]
     [Range(0f,1f)] public float batEventChance = 0.4f; // 40% chance per wave
     public GameObject batEventPrefab; // prefab to spawn for the bat event
@@ -86,6 +92,25 @@ public class WaveManager : MonoBehaviour
         waveInProgress = true;
 
         StartCoroutine(SpawnWave(wave));
+
+        // spawn boss every 10th wave (or on wave 1 if forced for testing)
+        int waveNumber = currentWave + 1;
+        bool shouldSpawnBoss = (waveNumber % 10 == 0) || (forceBossSpawn && waveNumber == 1);
+        if (shouldSpawnBoss && bossPrefab != null && spawnPoints != null && spawnPoints.Length > 0)
+        {
+            Transform bossSpawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
+            GameObject boss = Instantiate(bossPrefab, bossSpawnPoint.position, Quaternion.identity);
+            
+            // Flip the boss scale on spawn (boss prefab appears to have inverted default facing)
+            if (boss != null)
+            {
+                Vector3 scale = boss.transform.localScale;
+                scale.x *= -1f;
+                boss.transform.localScale = scale;
+            }
+            
+            Debug.Log($"Boss spawned at wave {waveNumber} at position {bossSpawnPoint.position}");
+        }
 
         // roll for bat event for this wave (or force it for testing)
         if (!isBatEventActive && batEventPrefab != null && spawnPoints != null && spawnPoints.Length > 0)

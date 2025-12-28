@@ -135,9 +135,6 @@ public class BossBandit : MonoBehaviour
         if (damageLayer == 0)
             damageLayer = 1 << 11;
 
-        // Initialize facing from the sprite's current scale so we match art orientation
-        facingRight = transform.localScale.x > 0f;
-
         // Ensure we face the player on spawn
         if (player != null)
         {
@@ -245,6 +242,7 @@ public class BossBandit : MonoBehaviour
     public void TakeDamage(int damage)
     {
         if (isDead) return;
+        if (isRecovering) return; // boss is invulnerable during recovery phase
         currentHealth -= damage;
         // Boss animator uses 'Hurt'
         animator?.SetTrigger("Hurt");
@@ -611,6 +609,39 @@ public class BossBandit : MonoBehaviour
                 yield return null;
             }
 
+            // Wait for the Recover animation state to fully complete
+            float animWaitTimeout = 3f;
+            float animWaitTime = 0f;
+            while (animWaitTime < animWaitTimeout)
+            {
+                if (isDead) break;
+                
+                // Keep position locked while waiting for animation
+                if (rb != null)
+                {
+                    rb.MovePosition((Vector2)recoverLockedPosition);
+                    rb.linearVelocity = Vector2.zero;
+                }
+                else
+                {
+                    transform.position = recoverLockedPosition;
+                }
+
+                var state = animator.GetCurrentAnimatorStateInfo(0);
+                // Check if we're in the Recover state and it's completed (normalizedTime >= 1.0)
+                if (state.IsName("Recover") && state.normalizedTime >= 1.0f)
+                {
+                    break;
+                }
+                
+                animWaitTime += Time.deltaTime;
+                yield return null;
+            }
+
+            // Clear stun and attack timers so boss can move immediately
+            stunTimer = 0f;
+            attackTimer = 0f;
+
             // restore animator speed
             animator.speed = originalSpeed;
         }
@@ -705,6 +736,13 @@ public class BossBandit : MonoBehaviour
         // keep text at the configured offset
         hpText.transform.localPosition = hpTextOffset;
 
+        // Counter the parent's flip so the text always reads correctly
+        Vector3 s = hpText.transform.localScale;
+        float parentScaleX = transform.localScale.x;
+        // If parent is flipped (negative x scale), counter it with negative local scale
+        s.x = Mathf.Abs(s.x) * Mathf.Sign(parentScaleX) * -1f;
+        hpText.transform.localScale = s;
+
         // face the main camera if present, but keep text upright.
         if (Camera.main != null)
         {
@@ -715,20 +753,6 @@ public class BossBandit : MonoBehaviour
             {
                 Quaternion rot = Quaternion.LookRotation(lookDir);
                 hpText.transform.rotation = rot;
-
-                // Ensure the text is not mirrored: if the text's forward faces away from the camera,
-                // flip its X scale so it reads correctly.
-                Vector3 s = hpText.transform.localScale;
-                s.x = Mathf.Abs(s.x);
-                hpText.transform.localScale = s;
-
-                Vector3 toCamera = (camPos - hpText.transform.position).normalized;
-                float forwardDot = Vector3.Dot(hpText.transform.forward, toCamera);
-                if (forwardDot < 0f)
-                {
-                    s.x = -s.x;
-                    hpText.transform.localScale = s;
-                }
             }
         }
     }
